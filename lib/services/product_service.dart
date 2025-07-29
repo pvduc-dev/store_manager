@@ -1,18 +1,35 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../models/product.dart';
 
 class ProductService {
   static const String baseUrl = 'https://kochamtoys.pl/wp-json/wc/v3';
-  static const String consumerKey =
-      'ck_e9a2ac84a523b06df41f743cad854c4c268d4d1';
-  static const String consumerSecret =
-      'cs_a3be7b8f5a85e98be41d17505eee1875f1e8e76b';
 
-  static String get _basicAuth {
-    final credentials = '$consumerKey:$consumerSecret';
-    return 'Basic $credentials';
+  static Future<List<Product>> getProducts() async {
+    try {
+      final response = await Dio().get(
+        '$baseUrl/products',
+        options: Options(
+          headers: {
+            'Authorization':
+                'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data
+            .map((json) => Product.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        print('Error fetching products: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Exception while fetching products: $e');
+      return [];
+    }
   }
 
   static Future<Product?> getProductDetail(int productId) async {
@@ -22,7 +39,7 @@ class ProductService {
         options: Options(
           headers: {
             'Authorization':
-                'Basic Y2tfZTlhMmFjODRhNTIzYjA2ZGY0MWY3NDNjYWQ4NTRjNGNjMjY4ZDRkMTpjc19hM2JlN2I4ZjVhODVlOThiZTQxZDE3NTA1ZWVlMTg3NWYxZThlNzZi',
+                'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
           },
         ),
       );
@@ -36,6 +53,70 @@ class ProductService {
     } catch (e) {
       print('Exception while fetching product: $e');
       return null;
+    }
+  }
+
+  static Future<bool> createProduct(
+    Map<String, dynamic> data,
+    File? imageFile,
+  ) async {
+    // Upload image first if provided
+    if (imageFile != null) {
+      try {
+        final imageBytes = await imageFile.readAsBytes();
+        final fileName = imageFile.path.split('/').last;
+
+        final imageUploadResponse = await Dio().post(
+          'https://kochamtoys.pl/wp-json/wp/v2/media',
+          options: Options(
+            headers: {
+              'Authorization':
+                  'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
+              'Content-Type': 'image/jpeg',
+              'Content-Disposition': 'attachment; filename="$fileName"',
+            },
+          ),
+          data: Stream.fromIterable(imageBytes.map((e) => [e])),
+        );
+
+        if (imageUploadResponse.statusCode == 201) {
+          // Add image ID to product data
+          data['images'] = [
+            {'id': imageUploadResponse.data['id']},
+          ];
+        } else {
+          print('Error uploading image: ${imageUploadResponse.statusCode}');
+          return false;
+        }
+      } catch (e) {
+        if (e is DioException) {
+          print('DioException: ${e.response?.data}');
+        }
+        print('Exception while uploading image: $e');
+        return false;
+      }
+    }
+    try {
+      final response = await Dio().post(
+        '$baseUrl/products',
+        options: Options(
+          headers: {
+            'Authorization':
+                'Basic Y2tfZTlhMmFjODRhNTIzYjA2ZGY0MWY3NDNjYWQ4NTRjNGNjMjY4ZDRkMTpjc19hM2JlN2I4ZjVhODVlOThiZTQxZDE3NTA1ZWVlMTg3NWYxZThlNzZi',
+          },
+        ),
+        data: data,
+      );
+
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        print('Error creating product: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Exception while creating product: $e');
+      return false;
     }
   }
 
@@ -54,7 +135,8 @@ class ProductService {
           'https://kochamtoys.pl/wp-json/wp/v2/media',
           options: Options(
             headers: {
-              'Authorization': 'Basic cGhhcHZuOlBoYXBEdXlAMjAyNQ==',
+              'Authorization':
+                  'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
               'Content-Type': 'image/jpeg',
               'Content-Disposition': 'attachment; filename="$fileName"',
             },

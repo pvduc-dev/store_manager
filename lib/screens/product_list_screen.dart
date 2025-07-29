@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../models/product.dart';
+import '../services/product_service.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -11,74 +13,38 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  // Dữ liệu mẫu cho sản phẩm
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'maskotka',
-      'id': '250723094732',
-      'price': '1 zł',
-      'stock': '0(0pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/8B5CF6/FFFFFF?text=Gengar',
-      'hasBanner': false,
-      'hasFABs': false,
-    },
-    {
-      'name': 'so 03',
-      'id': '123',
-      'price': '121 zł',
-      'stock': '0(0pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=Group',
-      'hasBanner': false,
-      'hasFABs': false,
-    },
-    {
-      'name': 'labubu',
-      'id': '250722191336',
-      'price': '12 zł',
-      'stock': '0(0pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/8B5CF6/FFFFFF?text=Labubu',
-      'hasBanner': false,
-      'hasFABs': false,
-    },
-    {
-      'name': 'labubu',
-      'id': '250719114552',
-      'price': '12 zł',
-      'stock': '0(0pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/10B981/FFFFFF?text=Box',
-      'hasBanner': true,
-      'hasFABs': false,
-    },
-    {
-      'name': 'breloczki',
-      'id': '250719114003',
-      'price': '12 zł',
-      'stock': '-4(-4pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/F59E0B/FFFFFF?text=Keychains',
-      'hasBanner': false,
-      'hasFABs': true,
-    },
-    {
-      'name': 'breloczki',
-      'id': '250719102012',
-      'price': '12 zł',
-      'stock': '0(0pcs)',
-      'quantity': 1,
-      'image': 'https://via.placeholder.com/150/F59E0B/FFFFFF?text=More',
-      'hasBanner': false,
-      'hasFABs': false,
-    },
-  ];
+  List<Product> _products = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    final products = await ProductService.getProducts();
+    setState(() {
+      _products = products;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/products/add');
+        },
+        backgroundColor: Colors.blue,
+        child: Icon(Icons.add, color: Colors.white),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -87,9 +53,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
             // Thanh lọc và sắp xếp
             // _buildFilterBar(),
-
-            // Danh sách sản phẩm
-            Expanded(child: _buildProductGrid()),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _products.length,
+                itemBuilder: (context, index) =>
+                    _buildProductCard(_products[index]),
+              ),
+            ),
           ],
         ),
       ),
@@ -135,10 +105,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(
-                onPressed: () {},
-                child: Text('Tìm kiếm'),
-              ),
+              FilledButton(onPressed: () {}, child: Text('Tìm kiếm')),
             ],
           ),
         ],
@@ -191,156 +158,75 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 
-  Widget _buildProductGrid() {
-    return GridView.builder(
-      padding: EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+  Widget _buildProductCard(Product product) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
-      itemCount: _products.length,
-      itemBuilder: (context, index) {
-        return _buildProductCard(_products[index]);
-      },
-    );
-  }
-
-  Widget _buildProductCard(Map<String, dynamic> product) {
-    return GestureDetector(
-      onTap: () {
-        context.push('/products/${product['id']}');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: () {
+          context.push('/products/${product.id}');
+        },
+        child: Row(
           children: [
-            // Banner (nếu có)
-            if (product['hasBanner'])
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.yellow[100],
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Chuyên sỉ và lẻ sẵn hàng tại chợ sapa... Xem thêm',
-                  style: TextStyle(fontSize: 12, color: Colors.orange[800]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            Container(
+              width: 80,
+              height: 80,
+              margin: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                image: DecorationImage(
+                  image: NetworkImage(product.images.first.src),
+                  fit: BoxFit.cover,
+                  onError: (exception, stackTrace) {},
                 ),
               ),
-
-            // Hình ảnh sản phẩm
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(product['hasBanner'] ? 0 : 12),
-                      topRight: Radius.circular(product['hasBanner'] ? 0 : 12),
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(product['hasBanner'] ? 0 : 12),
-                      topRight: Radius.circular(product['hasBanner'] ? 0 : 12),
-                    ),
-                    child: Image.network(
-                      product['image'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          child: Icon(Icons.image, color: Colors.grey[400]),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
             ),
-
-            // Thông tin sản phẩm
-            Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product['name'],
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    product['id'],
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    product['price'],
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.inventory_2,
-                        size: 14,
-                        color: Colors.grey[600],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        product['stock'],
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '[x${product['quantity']}]',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blue[600],
-                      fontWeight: FontWeight.w500,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                    SizedBox(height: 4),
+                    Text(
+                      product.metaData
+                              .where((element) => element.key == 'custom_price')
+                              .firstOrNull
+                              ?.value ??
+                          product.price,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }

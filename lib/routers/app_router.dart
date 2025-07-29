@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/auth_provider.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
+import 'package:store_manager/screens/new_product_screen.dart';
 import 'package:store_manager/screens/product_detail.dart';
 import 'package:store_manager/screens/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
@@ -49,6 +50,12 @@ class AppRouter {
           ],
         ),
         GoRoute(
+          path: '/products/add',
+          builder: (context, state) => const NewProductScreen(),
+          redirect: (BuildContext context, GoRouterState state) =>
+              _protectedRedirect(context, authNotifier),
+        ),
+        GoRoute(
           path: '/products/:id',
           builder: (context, state) =>
               ProductDetail(id: state.pathParameters['id'] ?? ''),
@@ -56,7 +63,7 @@ class AppRouter {
       ],
       redirect: (BuildContext context, GoRouterState state) {
         if (authNotifier.isLoggedIn && state.matchedLocation == '/login') {
-          return '/products/1852';
+          return '/products';
         }
         return null;
       },

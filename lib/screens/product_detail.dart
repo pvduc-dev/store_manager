@@ -20,6 +20,7 @@ class _ProductDetailState extends State<ProductDetail> {
   bool isSaving = false;
   File? imageFile;
   final ImagePicker _imagePicker = ImagePicker();
+  String? imageSrc;
 
   // Controllers cho form
   late TextEditingController nameController;
@@ -73,12 +74,22 @@ class _ProductDetailState extends State<ProductDetail> {
         // Populate form fields
         nameController.text = loadedProduct.name;
         descriptionController.text = loadedProduct.description;
-        priceController.text = loadedProduct.metaData.firstWhere((element) => element.key == 'custom_price').value;
+        // Safely get custom_price from metaData
+        try {
+          final customPriceMeta = loadedProduct.metaData.firstWhere(
+            (element) => element.key == 'custom_price',
+          );
+          priceController.text = customPriceMeta.value;
+        } catch (e) {
+          // If custom_price not found or metaData is empty, set empty string
+          priceController.text = '';
+        }
         paczkaController.text = loadedProduct.paczka;
         kartonController.text = loadedProduct.karton;
         khoHangController.text = loadedProduct.khoHang;
       }
     } catch (e) {
+      print('Error loading product: $e');
       setState(() {
         isLoading = false;
       });
@@ -120,8 +131,7 @@ class _ProductDetailState extends State<ProductDetail> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Lưu thành công!')));
-          // Reload product data
-          await _loadProduct();
+          context.go('/products');
         }
       } else {
         if (mounted) {
@@ -152,6 +162,7 @@ class _ProductDetailState extends State<ProductDetail> {
     if (pickedImage != null) {
       setState(() {
         imageFile = File(pickedImage.path);
+        imageSrc = pickedImage.path;
       });
     }
   }
@@ -185,12 +196,12 @@ class _ProductDetailState extends State<ProductDetail> {
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: product!.images.isNotEmpty
+                      child: imageFile != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(4),
-                              child: Image.network(
-                                product!.images.first.src,
-                                fit: BoxFit.cover,
+                              child: Image.file(
+                                imageFile!,
+                                fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -210,26 +221,51 @@ class _ProductDetailState extends State<ProductDetail> {
                                 },
                               ),
                             )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.image_outlined,
-                                  size: 48,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  onPressed: _pickImage,
-                                  icon: const Icon(Icons.upload),
-                                  label: const Text('Tải ảnh lên'),
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.grey[200],
-                                    foregroundColor: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
+                          : (product!.images.isNotEmpty
+                                ? Image.network(
+                                    product!.images.first.src,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.image_outlined,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Không thể tải ảnh',
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.image_outlined,
+                                        size: 48,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton.icon(
+                                        onPressed: _pickImage,
+                                        icon: const Icon(Icons.upload),
+                                        label: const Text('Tải ảnh lên'),
+                                        style: TextButton.styleFrom(
+                                          backgroundColor: Colors.grey[200],
+                                          foregroundColor: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  )),
                     ),
                     const SizedBox(height: 24),
 
