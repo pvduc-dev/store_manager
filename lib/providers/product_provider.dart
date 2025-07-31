@@ -1,18 +1,59 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:store_manager/models/product.dart';
-import 'package:http/http.dart' as http;
+import 'package:store_manager/models/product.dart' as models;
+import 'package:store_manager/services/product_service.dart';
 
 class ProductProvider extends ChangeNotifier {
-  List<Product> _products = [];
+  List<models.Product> _products = [];
 
-  List<Product> get products => _products;
+  Map<int, models.Product> _productsMap = {};
 
-  loadProducts() async {
-    final response = await http.get(Uri.parse('https://api.example.com/products'));
-    final data = jsonDecode(response.body);
-    _products = data.map((product) => Product.fromJson(product)).toList();
+  bool _isLoading = false;
+
+  List<models.Product> get products => _products;
+
+  Map<int, models.Product> get productsMap => _productsMap;
+
+  bool get isLoading => _isLoading;
+
+  Future<void> loadProducts() async {
+    _isLoading = true;
     notifyListeners();
+
+    final response = await ProductService.getProducts();
+    _products = response;
+    _productsMap = Map.fromEntries(
+      response.map((product) => MapEntry(product.id, product)),
+    );
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  updateProduct(Map<String, dynamic> data) async {
+    final product = await ProductService.updateProduct(data);
+    final index = _products.indexWhere((p) => p.id == product!.id);
+    if (index != -1) {
+      _products[index] = product!;
+      _productsMap[product.id] = product;
+      notifyListeners();
+    }
+  }
+
+  addProduct(Map<String, dynamic> data) async {
+    final product = await ProductService.createProduct(data);
+    if (product != null) {
+      _products.insert(0, product);
+      _productsMap[product.id] = product;
+      notifyListeners();
+    }
+  }
+
+  removeProduct(String productId) {
+    _products.removeWhere((product) => product.id == productId);
+    _productsMap.remove(productId);
+    notifyListeners();
+  }
+
+  models.Product? getProductById(int id) {
+    return _productsMap[id];
   }
 }

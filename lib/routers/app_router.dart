@@ -13,8 +13,8 @@ import 'package:store_manager/widgets/shell_widget.dart';
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/login',
-      refreshListenable: authNotifier,
+      initialLocation: '/products',
+      // refreshListenable: authNotifier,
       routes: [
         GoRoute(
           path: '/login',
@@ -26,34 +26,34 @@ class AppRouter {
             GoRoute(
               path: '/',
               builder: (context, state) => const HomeScreen(),
-              redirect: (BuildContext context, GoRouterState state) =>
-                  _protectedRedirect(context, authNotifier),
+              // redirect: (BuildContext context, GoRouterState state) =>
+              //     _protectedRedirect(context, authNotifier),
             ),
             GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingScreen(),
-              redirect: (BuildContext context, GoRouterState state) =>
-                  _protectedRedirect(context, authNotifier),
+              // redirect: (BuildContext context, GoRouterState state) =>
+              //     _protectedRedirect(context, authNotifier),
             ),
             GoRoute(
               path: '/products',
               builder: (context, state) => const ProductListScreen(),
-              redirect: (BuildContext context, GoRouterState state) =>
-                  _protectedRedirect(context, authNotifier),
+              // redirect: (BuildContext context, GoRouterState state) =>
+              //     _protectedRedirect(context, authNotifier),
             ),
             GoRoute(
               path: '/orders',
               builder: (context, state) => const OrderListScreen(),
-              redirect: (BuildContext context, GoRouterState state) =>
-                  _protectedRedirect(context, authNotifier),
+              // redirect: (BuildContext context, GoRouterState state) =>
+              //     _protectedRedirect(context, authNotifier),
             ),
           ],
         ),
         GoRoute(
           path: '/products/add',
           builder: (context, state) => const NewProductScreen(),
-          redirect: (BuildContext context, GoRouterState state) =>
-              _protectedRedirect(context, authNotifier),
+          // redirect: (BuildContext context, GoRouterState state) =>
+          //     _protectedRedirect(context, authNotifier),
         ),
         GoRoute(
           path: '/products/:id',
@@ -61,22 +61,22 @@ class AppRouter {
               ProductDetail(id: state.pathParameters['id'] ?? ''),
         ),
       ],
-      redirect: (BuildContext context, GoRouterState state) {
-        if (authNotifier.isLoggedIn && state.matchedLocation == '/login') {
-          return '/products';
-        }
-        return null;
-      },
+      // redirect: (BuildContext context, GoRouterState state) {
+      //   if (authNotifier.isLoggedIn && state.matchedLocation == '/login') {
+      //     return '/products';
+      //   }
+      //   return null;
+      // },
     );
   }
 
-  static String? _protectedRedirect(
-    BuildContext context,
-    AuthProvider authNotifier,
-  ) {
-    if (!authNotifier.isLoggedIn) {
-      return '/login';
-    }
-    return null;
-  }
+  // static String? _protectedRedirect(
+  //   BuildContext context,
+  //   AuthProvider authNotifier,
+  // ) {
+  //   if (!authNotifier.isLoggedIn) {
+  //     return '/login';
+  //   }
+  //   return null;
+  // }
 }

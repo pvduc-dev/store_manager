@@ -4,17 +4,14 @@ import '../models/product.dart';
 
 class ProductService {
   static const String baseUrl = 'https://kochamtoys.pl/wp-json/wc/v3';
+  static const String basicAuth =
+      'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
   static Future<List<Product>> getProducts() async {
     try {
       final response = await Dio().get(
-        '$baseUrl/products',
-        options: Options(
-          headers: {
-            'Authorization':
-                'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
-          },
-        ),
+        '$baseUrl/products?per_page=36',
+        options: Options(headers: {'Authorization': basicAuth}),
       );
 
       if (response.statusCode == 200) {
@@ -32,156 +29,82 @@ class ProductService {
     }
   }
 
-  static Future<Product?> getProductDetail(int productId) async {
+  static Future<int?> uploadImage(File imageFile) async {
     try {
-      final response = await Dio().get(
-        '$baseUrl/products/$productId',
+      final imageBytes = await imageFile.readAsBytes();
+      final fileName = imageFile.path.split('/').last;
+
+      final imageUploadResponse = await Dio().post(
+        'https://kochamtoys.pl/wp-json/wp/v2/media',
         options: Options(
           headers: {
-            'Authorization':
-                'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
+            'Authorization': basicAuth,
+            'Content-Type': 'image/jpeg',
+            'Content-Disposition': 'attachment; filename="$fileName"',
           },
         ),
+        data: Stream.fromIterable(imageBytes.map((e) => [e])),
       );
 
-      if (response.statusCode == 200) {
-        return Product.fromJson(response.data);
+      if (imageUploadResponse.statusCode == 201) {
+        return imageUploadResponse.data['id'];
       } else {
-        print('Error fetching product: ${response.statusCode}');
+        print('Error uploading image: ${imageUploadResponse.statusCode}');
         return null;
       }
     } catch (e) {
-      print('Exception while fetching product: $e');
+      print('Exception while uploading image: $e');
       return null;
     }
   }
 
-  static Future<bool> createProduct(
-    Map<String, dynamic> data,
-    File? imageFile,
-  ) async {
-    // Upload image first if provided
-    if (imageFile != null) {
-      try {
-        final imageBytes = await imageFile.readAsBytes();
-        final fileName = imageFile.path.split('/').last;
-
-        final imageUploadResponse = await Dio().post(
-          'https://kochamtoys.pl/wp-json/wp/v2/media',
-          options: Options(
-            headers: {
-              'Authorization':
-                  'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
-              'Content-Type': 'image/jpeg',
-              'Content-Disposition': 'attachment; filename="$fileName"',
-            },
-          ),
-          data: Stream.fromIterable(imageBytes.map((e) => [e])),
-        );
-
-        if (imageUploadResponse.statusCode == 201) {
-          // Add image ID to product data
-          data['images'] = [
-            {'id': imageUploadResponse.data['id']},
-          ];
-        } else {
-          print('Error uploading image: ${imageUploadResponse.statusCode}');
-          return false;
-        }
-      } catch (e) {
-        if (e is DioException) {
-          print('DioException: ${e.response?.data}');
-        }
-        print('Exception while uploading image: $e');
-        return false;
-      }
-    }
+  static Future<Product?> createProduct(Map<String, dynamic> data) async {
     try {
       final response = await Dio().post(
         '$baseUrl/products',
         options: Options(
           headers: {
-            'Authorization':
-                'Basic Y2tfZTlhMmFjODRhNTIzYjA2ZGY0MWY3NDNjYWQ4NTRjNGNjMjY4ZDRkMTpjc19hM2JlN2I4ZjVhODVlOThiZTQxZDE3NTA1ZWVlMTg3NWYxZThlNzZi',
+            'Authorization': basicAuth,
+            'Content-Type': 'application/json',
           },
         ),
         data: data,
       );
 
       if (response.statusCode == 201) {
-        return true;
+        return Product.fromJson(response.data);
       } else {
         print('Error creating product: ${response.statusCode}');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Exception while creating product: $e');
-      return false;
+      return null;
     }
   }
 
-  static Future<bool> updateProduct(
-    int productId,
-    Map<String, dynamic> data,
-    File? imageFile,
-  ) async {
-    // Upload image first if provided
-    if (imageFile != null) {
-      try {
-        final imageBytes = await imageFile.readAsBytes();
-        final fileName = imageFile.path.split('/').last;
-
-        final imageUploadResponse = await Dio().post(
-          'https://kochamtoys.pl/wp-json/wp/v2/media',
-          options: Options(
-            headers: {
-              'Authorization':
-                  'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
-              'Content-Type': 'image/jpeg',
-              'Content-Disposition': 'attachment; filename="$fileName"',
-            },
-          ),
-          data: Stream.fromIterable(imageBytes.map((e) => [e])),
-        );
-
-        if (imageUploadResponse.statusCode == 201) {
-          // Add image ID to product data
-          data['images'] = [
-            {'id': imageUploadResponse.data['id']},
-          ];
-        } else {
-          print('Error uploading image: ${imageUploadResponse.statusCode}');
-          return false;
-        }
-      } catch (e) {
-        if (e is DioException) {
-          print('DioException: ${e.response?.data}');
-        }
-        print('Exception while uploading image: $e');
-        return false;
-      }
-    }
+  static Future<Product?> updateProduct(Map<String, dynamic> data) async {
     try {
       final response = await Dio().put(
-        '$baseUrl/products/$productId',
+        '$baseUrl/products/${data['id']}',
         options: Options(
           headers: {
-            'Authorization':
-                'Basic Y2tfZTlhMmFjODRhNTIzYjA2ZGY0MWY3NDNjYWQ4NTRjNGNjMjY4ZDRkMTpjc19hM2JlN2I4ZjVhODVlOThiZTQxZDE3NTA1ZWVlMTg3NWYxZThlNzZi',
+            'Authorization': basicAuth,
+            'Content-Type': 'application/json',
           },
         ),
         data: data,
       );
 
       if (response.statusCode == 200) {
-        return true;
+        return Product.fromJson(response.data);
       } else {
         print('Error updating product: ${response.statusCode}');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Exception while updating product: $e');
-      return false;
+      return null;
     }
   }
 }

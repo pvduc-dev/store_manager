@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../models/product.dart';
-import '../services/product_service.dart';
+import '../providers/product_provider.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -13,19 +15,9 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  List<Product> _products = [];
-
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
-  }
-
-  Future<void> _fetchProducts() async {
-    final products = await ProductService.getProducts();
-    setState(() {
-      _products = products;
-    });
   }
 
   @override
@@ -48,16 +40,52 @@ class _ProductListScreenState extends State<ProductListScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header với thanh tìm kiếm
             _buildHeader(),
-
-            // Thanh lọc và sắp xếp
-            // _buildFilterBar(),
+            _buildFilterBar(),
             Expanded(
-              child: ListView.builder(
-                itemCount: _products.length,
-                itemBuilder: (context, index) =>
-                    _buildProductCard(_products[index]),
+              child: Consumer<ProductProvider>(
+                builder: (context, productProvider, child) {
+                  if (productProvider.isLoading) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (productProvider.products.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Chưa có sản phẩm nào',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() {
+                        productProvider.loadProducts();
+                      });
+                    },
+                    child: ListView.builder(
+                      itemCount: productProvider.products.length,
+                      itemBuilder: (context, index) =>
+                          _buildProductCard(productProvider.products[index]),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -118,7 +146,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Sắp xếp
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -136,7 +163,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           Spacer(),
 
-          // Bộ lọc
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -185,12 +211,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
               margin: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                image: DecorationImage(
-                  image: NetworkImage(product.images.first.src),
-                  fit: BoxFit.cover,
-                  onError: (exception, stackTrace) {},
-                ),
+                color: Colors.grey[200],
+                image: product.images.isNotEmpty
+                    ? DecorationImage(
+                        image: CachedNetworkImageProvider(
+                          product.images.first.src ?? '',
+                        ),
+                        fit: BoxFit.cover,
+                        onError: (exception, stackTrace) {
+                          return null;
+                        },
+                      )
+                    : null,
               ),
+              child: product.images.isEmpty
+                  ? Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey[400],
+                      size: 32,
+                    )
+                  : null,
             ),
             Expanded(
               child: Padding(
@@ -213,7 +253,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               .where((element) => element.key == 'custom_price')
                               .firstOrNull
                               ?.value ??
-                          product.price,
+                          '',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.red,
