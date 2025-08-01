@@ -289,6 +289,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
               TextFormField(
                 controller: nameController,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Tên sản phẩm *',
                   border: OutlineInputBorder(),
@@ -300,6 +301,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
               TextFormField(
                 controller: descriptionController,
                 maxLines: 3,
+                textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
                   labelText: 'Mô tả sản phẩm',
                   border: OutlineInputBorder(),
@@ -311,6 +313,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
               TextFormField(
                 controller: priceController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Giá bán *',
                   border: OutlineInputBorder(),
@@ -322,6 +325,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
               TextFormField(
                 controller: paczkaController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'PACZKA',
                   border: OutlineInputBorder(),
@@ -333,6 +337,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
               TextFormField(
                 controller: kartonController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Karton',
                   border: OutlineInputBorder(),
@@ -343,6 +348,8 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
               TextFormField(
                 controller: khoHangController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Kho hàng',
                   border: OutlineInputBorder(),

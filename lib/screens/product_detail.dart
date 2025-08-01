@@ -376,6 +376,7 @@ class _ProductDetailState extends State<ProductDetail> {
                     // Product Name
                     TextFormField(
                       controller: nameController,
+                      textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'Tên sản phẩm',
                         border: OutlineInputBorder(),
@@ -388,6 +389,7 @@ class _ProductDetailState extends State<ProductDetail> {
                     TextFormField(
                       controller: descriptionController,
                       maxLines: 3,
+                      textInputAction: TextInputAction.newline,
                       decoration: const InputDecoration(
                         labelText: 'Mô tả sản phẩm',
                         border: OutlineInputBorder(),
@@ -400,6 +402,7 @@ class _ProductDetailState extends State<ProductDetail> {
                     TextFormField(
                       controller: customPriceController,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       decoration: const InputDecoration(
                         labelText: 'Giá bán',
                         border: OutlineInputBorder(),
@@ -412,6 +415,7 @@ class _ProductDetailState extends State<ProductDetail> {
                     TextFormField(
                       controller: paczkaController,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       decoration: const InputDecoration(
                         labelText: 'PACZKA',
                         border: OutlineInputBorder(),
@@ -424,6 +428,7 @@ class _ProductDetailState extends State<ProductDetail> {
                     TextFormField(
                       controller: kartonController,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       decoration: const InputDecoration(
                         labelText: 'Karton',
                         border: OutlineInputBorder(),
@@ -435,6 +440,8 @@ class _ProductDetailState extends State<ProductDetail> {
                     // Kho hang
                     TextFormField(
                       controller: warehouseController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       decoration: const InputDecoration(
                         labelText: 'Kho hang',
                         border: OutlineInputBorder(),
