@@ -5,12 +5,11 @@ import 'package:store_manager/providers/auth_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final authProvider = AuthProvider();
   final productProvider = ProductProvider();
-  await productProvider.loadProducts();
-  await authProvider.init();
+  productProvider.loadProducts();
   runApp(StoreManagerApp(authProvider: authProvider, productProvider: productProvider));
 }
 

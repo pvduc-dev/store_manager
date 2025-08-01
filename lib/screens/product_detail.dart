@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart' hide MetaData;
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -213,243 +214,253 @@ class _ProductDetailState extends State<ProductDetail> {
           : SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // Product Image
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: imageFile != null
-                            ? Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Image.file(
-                                      imageFile!,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Column(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    // Đóng bàn phím khi chạm ra ngoài
+                    FocusScope.of(context).unfocus();
+                  },
+                  child: Column(
+                    children: [
+                      // Product Image
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: imageFile != null
+                              ? Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.file(
+                                        imageFile!,
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.image_outlined,
+                                                    size: 48,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  const Text(
+                                                    'Không thể tải ảnh',
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                      ),
+                                    ),
+                                    // Hiển thị loading khi đang upload
+                                    if (isUploading)
+                                      Positioned.fill(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.5),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: const Center(
+                                            child: Column(
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                Icon(
-                                                  Icons.image_outlined,
-                                                  size: 48,
-                                                  color: Colors.grey,
+                                                CircularProgressIndicator(
+                                                  color: Colors.white,
                                                 ),
-                                                const SizedBox(height: 8),
-                                                const Text(
-                                                  'Không thể tải ảnh',
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Đang upload...',
                                                   style: TextStyle(
-                                                    color: Colors.grey,
+                                                    color: Colors.white,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                               ],
-                                            );
-                                          },
-                                    ),
-                                  ),
-                                  // Hiển thị loading khi đang upload
-                                  if (isUploading)
-                                    Positioned.fill(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.5),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
+                                            ),
                                           ),
                                         ),
-                                        child: const Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                      ),
+                                    if (uploadedImageId != null && !isUploading)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              CircularProgressIndicator(
+                                              Icon(
+                                                Icons.check,
                                                 color: Colors.white,
+                                                size: 16,
                                               ),
-                                              SizedBox(height: 8),
+                                              SizedBox(width: 4),
                                               Text(
-                                                'Đang upload...',
+                                                'Đã upload',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 14,
+                                                  fontSize: 12,
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  if (uploadedImageId != null && !isUploading)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.check,
-                                              color: Colors.white,
-                                              size: 16,
+                                  ],
+                                )
+                              : (product!.images.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: product!.images.first.src!,
+                                        fit: BoxFit.contain,
+                                        placeholder: (context, url) =>
+                                            const Center(
+                                              child: CircularProgressIndicator(),
                                             ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Đã upload',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              )
-                            : (product!.images.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: product!.images.first.src!,
-                                      fit: BoxFit.contain,
-                                      placeholder: (context, url) =>
-                                          const Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                      errorWidget: (context, url, error) {
-                                        return Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.image_outlined,
-                                              size: 48,
-                                              color: Colors.grey,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              'Không thể tải ảnh',
-                                              style: TextStyle(
+                                        errorWidget: (context, url, error) {
+                                          return Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.image_outlined,
+                                                size: 48,
                                                 color: Colors.grey,
                                               ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    )
-                                  : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.image_outlined,
-                                          size: 48,
-                                          color: Colors.grey,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        OutlinedButton(
-                                          onPressed: _pickImage,
-                                          child: const Text('Tải ảnh lên'),
-                                        ),
-                                      ],
-                                    )),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                'Không thể tải ảnh',
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      )
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.image_outlined,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          OutlinedButton(
+                                            onPressed: _pickImage,
+                                            child: const Text('Tải ảnh lên'),
+                                          ),
+                                        ],
+                                      )),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Product Name
-                    TextFormField(
-                      controller: nameController,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Tên sản phẩm',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                      // Product Name
+                      TextFormField(
+                        controller: nameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Tên sản phẩm',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Product Description
-                    TextFormField(
-                      controller: descriptionController,
-                      maxLines: 3,
-                      textInputAction: TextInputAction.newline,
-                      decoration: const InputDecoration(
-                        labelText: 'Mô tả sản phẩm',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                      // Product Description
+                      // TextFormField(
+                      //   controller: descriptionController,
+                      //   maxLines: 3,
+                      //   textInputAction: TextInputAction.newline,
+                      //   decoration: const InputDecoration(
+                      //     labelText: 'Mô tả sản phẩm',
+                      //     border: OutlineInputBorder(),
+                      //     isDense: true,
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 24),
 
-                    // Custom Price
-                    TextFormField(
-                      controller: customPriceController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Giá bán',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                      // Custom Price
+                      TextFormField(
+                        controller: customPriceController,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                        ],
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Giá bán',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // PACZKA
-                    TextFormField(
-                      controller: paczkaController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'PACZKA',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                      // PACZKA
+                      TextFormField(
+                        controller: paczkaController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'PACZKA',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Karton
-                    TextFormField(
-                      controller: kartonController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Karton',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                      // Karton
+                      TextFormField(
+                        controller: kartonController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Karton',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Kho hang
-                    TextFormField(
-                      controller: warehouseController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Kho hang',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                      // Kho hang
+                      TextFormField(
+                        controller: warehouseController,
+                        keyboardType: TextInputType.name,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Kho hang',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
