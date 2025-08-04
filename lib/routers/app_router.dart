@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/auth_provider.dart';
-import 'package:store_manager/screens/customer_screen.dart';
+import 'package:store_manager/screens/customer_detail_screen.dart';
+import 'package:store_manager/screens/customer_list_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
@@ -8,12 +9,13 @@ import 'package:store_manager/screens/product_detail.dart';
 import 'package:store_manager/screens/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
 import 'package:store_manager/screens/order_list_screen.dart';
+import 'package:store_manager/screens/order_detail_screen.dart';
 import 'package:store_manager/widgets/shell_widget.dart';
 
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/',
+      initialLocation: '/customers',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
@@ -43,7 +45,7 @@ class AppRouter {
             ),
             GoRoute(
               path: '/customers',
-              builder: (context, state) => const CustomerScreen(),
+              builder: (context, state) => const CustomerListScreen(),
             ),
             GoRoute(
               path: '/orders',
@@ -63,6 +65,16 @@ class AppRouter {
           path: '/products/:id',
           builder: (context, state) =>
               ProductDetail(id: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/orders/:id',
+          builder: (context, state) =>
+              OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/customers/:id',
+          builder: (context, state) =>
+              CustomerDetailScreen(customerId: state.pathParameters['id'] ?? ''),
         ),
       ],
       // redirect: (BuildContext context, GoRouterState state) {

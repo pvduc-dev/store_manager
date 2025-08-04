@@ -9,40 +9,11 @@ class ProductProvider extends ChangeNotifier {
 
   bool _isLoading = false;
 
-  Set<int> _selectedProductIds = <int>{};
-
   List<models.Product> get products => _products;
 
   Map<int, models.Product> get productsMap => _productsMap;
 
   bool get isLoading => _isLoading;
-
-  Set<int> get selectedProductIds => _selectedProductIds;
-  
-  List<models.Product> get selectedProducts => _products
-      .where((product) => _selectedProductIds.contains(product.id))
-      .toList();
-
-  bool isProductSelected(int productId) => _selectedProductIds.contains(productId);
-
-  void toggleProductSelection(int productId) {
-    if (_selectedProductIds.contains(productId)) {
-      _selectedProductIds.remove(productId);
-    } else {
-      _selectedProductIds.add(productId);
-    }
-    notifyListeners();
-  }
-
-  void clearSelection() {
-    _selectedProductIds.clear();
-    notifyListeners();
-  }
-
-  void selectAll() {
-    _selectedProductIds.addAll(_products.map((p) => p.id));
-    notifyListeners();
-  }
 
   Future<void> loadProducts() async {
     _isLoading = true;
