@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/auth_provider.dart';
+import 'package:store_manager/screens/customer_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
@@ -13,7 +13,7 @@ import 'package:store_manager/widgets/shell_widget.dart';
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/products',
+      initialLocation: '/',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
@@ -40,6 +40,10 @@ class AppRouter {
               builder: (context, state) => const ProductListScreen(),
               // redirect: (BuildContext context, GoRouterState state) =>
               //     _protectedRedirect(context, authNotifier),
+            ),
+            GoRoute(
+              path: '/customers',
+              builder: (context, state) => const CustomerScreen(),
             ),
             GoRoute(
               path: '/orders',

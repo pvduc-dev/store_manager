@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/auth_provider.dart';
+import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
 
@@ -9,14 +10,28 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final authProvider = AuthProvider();
   final productProvider = ProductProvider();
+  final orderProvider = OrderProvider();
   productProvider.loadProducts();
-  runApp(StoreManagerApp(authProvider: authProvider, productProvider: productProvider));
+  orderProvider.fetchOrders();
+  runApp(
+    StoreManagerApp(
+      authProvider: authProvider,
+      productProvider: productProvider,
+      orderProvider: orderProvider,
+    ),
+  );
 }
 
 class StoreManagerApp extends StatelessWidget {
   final AuthProvider authProvider;
   final ProductProvider productProvider;
-  const StoreManagerApp({super.key, required this.authProvider, required this.productProvider});
+  final OrderProvider orderProvider;
+  const StoreManagerApp({
+    super.key,
+    required this.authProvider,
+    required this.productProvider,
+    required this.orderProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +39,7 @@ class StoreManagerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider.value(value: productProvider),
+        ChangeNotifierProvider.value(value: orderProvider),
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.appRouter(authProvider),

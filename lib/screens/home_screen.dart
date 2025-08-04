@@ -6,9 +6,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
+    return Scaffold(
+      appBar: AppBar(title: Text('Trang chủ')),
+      body: Column(
         children: [
+          Text('Biểu đồ doanh thu'),
           SizedBox(
             height: 200,
             child: LineChart(
@@ -33,10 +35,10 @@ class HomeScreen extends StatelessWidget {
               BarChartData(
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(showTitles: true),
                   ),
                   bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(showTitles: true),
                   ),
                 ),
               ),
@@ -48,8 +50,19 @@ class HomeScreen extends StatelessWidget {
               PieChartData(
                 sections: [
                   PieChartSectionData(
-                    value: 1,
+                    value: 0.1,
                     color: Colors.red,
+                    title: 'Huỷ đơn',
+                  ),
+                  PieChartSectionData(
+                    value: 2,
+                    color: Colors.blue,
+                    title: 'Đang giao',
+                  ),
+                  PieChartSectionData(
+                    value: 3,
+                    color: Colors.green,
+                    title: 'Đã giao',
                   ),
                 ],
               ),

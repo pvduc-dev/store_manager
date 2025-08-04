@@ -13,11 +13,14 @@ class ShellWidget extends StatelessWidget {
     if (location == '/products') {
       return 1;
     }
-    if (location == '/orders') {
+    if (location == '/customers') {
       return 2;
     }
-    if (location == '/settings') {
+    if (location == '/orders') {
       return 3;
+    }
+    if (location == '/settings') {
+      return 4;
     }
     return 0;
   }
@@ -34,6 +37,10 @@ class ShellWidget extends StatelessWidget {
             icon: Icon(Icons.inventory_2),
             label: 'Sản phẩm',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Khách hàng',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Đơn hàng'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Cài đặt'),
         ],
@@ -46,9 +53,12 @@ class ShellWidget extends StatelessWidget {
               context.go('/products');
               break;
             case 2:
-              context.go('/orders');
+              context.go('/customers');
               break;
             case 3:
+              context.go('/orders');
+              break;
+            case 4:
               context.go('/settings');
               break;
           }
