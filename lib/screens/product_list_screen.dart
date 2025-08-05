@@ -14,18 +14,78 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   Set<int> _selectedProductIds = <int>{};
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Đồng bộ search controller với provider state
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
+    _syncSearchController(productProvider);
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search to avoid too many API calls
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
+    if (_searchController.text.isEmpty && productProvider.isSearching) {
+      productProvider.clearSearch();
+    }
+  }
+
+  void _syncSearchController(ProductProvider productProvider) {
+    // Đồng bộ controller với provider state
+    if (productProvider.searchQuery != _searchController.text) {
+      _searchController.removeListener(_onSearchChanged);
+      _searchController.text = productProvider.searchQuery;
+      _searchController.addListener(_onSearchChanged);
+    }
+  }
+
+  void _performSearch() {
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      productProvider.searchProducts(query);
+    } else {
+      productProvider.clearSearch();
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      final productProvider = Provider.of<ProductProvider>(
+        context,
+        listen: false,
+      );
+      productProvider.loadMoreProducts();
+    }
   }
 
   bool isProductSelected(int productId) =>
@@ -72,10 +132,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
               child: Text('Hủy', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
-              onPressed: () {
-                clearSelection();
+              onPressed: () async {
                 Navigator.of(context).pop();
-
+                context.read<ProductProvider>().deleteProducts(
+                  _selectedProductIds.toList(),
+                );
+                clearSelection();
+                setState(() {
+                  _isSelectionMode = false;
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Đã xóa $selectedCount sản phẩm'),
@@ -86,6 +151,50 @@ class _ProductListScreenState extends State<ProductListScreen> {
               child: Text('Xóa', style: TextStyle(color: Colors.red)),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showSortBottomSheet(
+    BuildContext context,
+    ProductProvider productProvider,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sắp xếp theo',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 20),
+              ...ProductSortOption.values.map((option) {
+                final isSelected = productProvider.sortOption == option;
+                return ListTile(
+                  title: Text(option.displayName),
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: Colors.blue)
+                      : null,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    if (!isSelected) {
+                      await productProvider.changeSortOption(option);
+                    }
+                  },
+                );
+              }).toList(),
+            ],
+          ),
         );
       },
     );
@@ -124,18 +233,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.inventory_2_outlined,
+                            productProvider.isSearching
+                                ? Icons.search_off
+                                : Icons.inventory_2_outlined,
                             size: 64,
                             color: Colors.grey[400],
                           ),
                           SizedBox(height: 16),
                           Text(
-                            'Chưa có sản phẩm nào',
+                            productProvider.isSearching
+                                ? 'Không tìm thấy sản phẩm nào'
+                                : 'Chưa có sản phẩm nào',
                             style: TextStyle(
                               fontSize: 18,
                               color: Colors.grey[600],
                             ),
                           ),
+                          if (productProvider.isSearching) ...[
+                            SizedBox(height: 8),
+                            Text(
+                              'Thử tìm kiếm với từ khóa khác',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                           SizedBox(height: 8),
                         ],
                       ),
@@ -144,11 +267,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
                   return RefreshIndicator(
                     onRefresh: () async {
-                      setState(() {
-                        productProvider.loadProducts();
-                      });
+                      _searchController.removeListener(_onSearchChanged);
+                      _searchController.clear();
+                      _searchController.addListener(_onSearchChanged);
+                      productProvider.clearSearch();
+                      await productProvider.loadProducts(refresh: true);
                     },
                     child: GridView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -157,9 +283,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             mainAxisSpacing: 16,
                             childAspectRatio: 0.9,
                           ),
-                      itemCount: productProvider.products.length,
-                      itemBuilder: (context, index) =>
-                          _buildProductCard(productProvider.products[index]),
+                      itemCount:
+                          productProvider.products.length +
+                          (productProvider.hasMoreData ? 2 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= productProvider.products.length) {
+                          if (index == productProvider.products.length) {
+                            return productProvider.isLoadingMore
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 32,
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  )
+                                : const SizedBox.shrink();
+                          } else {
+                            return const SizedBox.shrink();
+                          }
+                        }
+
+                        return _buildProductCard(
+                          productProvider.products[index],
+                        );
+                      },
                     ),
                   );
                 },
@@ -195,6 +344,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         child: TextField(
                           controller: _searchController,
                           style: TextStyle(fontSize: 16),
+                          onSubmitted: (_) => _performSearch(),
                           decoration: InputDecoration(
                             hintText: 'Tìm kiếm các sản phẩm',
                             hintStyle: TextStyle(
@@ -202,6 +352,29 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               fontSize: 16,
                             ),
                             border: InputBorder.none,
+                            suffixIcon: Consumer<ProductProvider>(
+                              builder: (context, productProvider, child) {
+                                if (productProvider.isSearching) {
+                                  return IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: Colors.grey[600],
+                                    ),
+                                    onPressed: () {
+                                      _searchController.removeListener(
+                                        _onSearchChanged,
+                                      );
+                                      _searchController.clear();
+                                      _searchController.addListener(
+                                        _onSearchChanged,
+                                      );
+                                      productProvider.clearSearch();
+                                    },
+                                  );
+                                }
+                                return SizedBox.shrink();
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -210,7 +383,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(onPressed: () {}, child: Text('Tìm kiếm')),
+              FilledButton(onPressed: _performSearch, child: Text('Tìm kiếm')),
             ],
           ),
         ],
@@ -224,36 +397,46 @@ class _ProductListScreenState extends State<ProductListScreen> {
       child: Row(
         children: [
           if (!_isSelectionMode) ...[
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Text('Sắp xếp mặc định', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down, size: 16),
-                ],
-              ),
+            Consumer<ProductProvider>(
+              builder: (context, productProvider, child) {
+                return GestureDetector(
+                  onTap: () => _showSortBottomSheet(context, productProvider),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          productProvider.sortOption.displayName,
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down, size: 16),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
 
             Spacer(),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.filter_list, size: 16),
-                  SizedBox(width: 4),
-                  Text('Bộ lọc', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-            ),
+            // Container(
+            //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            //   decoration: BoxDecoration(
+            //     color: Colors.grey[100],
+            //     borderRadius: BorderRadius.circular(16),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Icon(Icons.filter_list, size: 16),
+            //       SizedBox(width: 4),
+            //       Text('Bộ lọc', style: TextStyle(fontSize: 16)),
+            //     ],
+            //   ),
+            // ),
             SizedBox(width: 12),
           ],
           if (_isSelectionMode) Spacer(),
@@ -332,12 +515,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     selectAll(productProvider.products);
                   }
                 },
-                                  child: Text(
-                   selectedCount == totalCount
-                       ? 'Bỏ chọn tất cả'
-                       : 'Chọn tất cả',
-                    style: TextStyle(color: Colors.blue, fontSize: 14),
-                  ),
+                child: Text(
+                  selectedCount == totalCount
+                      ? 'Bỏ chọn tất cả'
+                      : 'Chọn tất cả',
+                  style: TextStyle(color: Colors.blue, fontSize: 14),
+                ),
               ),
             ],
           ),
@@ -381,9 +564,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
               Opacity(
                 opacity: selectedCount > 0 ? 1.0 : 0.0,
                 child: FilledButton.icon(
-                  onPressed: selectedCount > 0 ? () {
-                    _showDeleteConfirmDialog();
-                  } : null,
+                  onPressed: selectedCount > 0
+                      ? () {
+                          _showDeleteConfirmDialog();
+                        }
+                      : null,
                   icon: Icon(Icons.delete, size: 18, color: Colors.white),
                   label: Text(
                     'Xóa',
@@ -493,14 +678,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              product.metaData
-                                      .where(
-                                        (element) =>
-                                            element.key == 'custom_price',
-                                      )
-                                      .firstOrNull
-                                      ?.value ??
-                                  '',
+                              '${product.metaData.where((element) => element.key == 'custom_price').firstOrNull?.value ?? ''} zł',
                               style: TextStyle(
                                 fontSize: 15,
                                 color: Colors.red,

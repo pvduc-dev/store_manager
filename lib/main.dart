@@ -15,6 +15,7 @@ void main() {
   final customerProvider = CustomerProvider();
   productProvider.loadProducts();
   orderProvider.loadOrders();
+  customerProvider.loadCustomers();
   runApp(
     StoreManagerApp(
       authProvider: authProvider,

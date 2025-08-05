@@ -76,6 +76,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
         'name': nameController.text.trim(),
         'description': descriptionController.text.trim(),
         'regular_price': priceController.text.trim(),
+        'price': priceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
         'meta_data': [

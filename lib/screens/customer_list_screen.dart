@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
@@ -12,7 +13,26 @@ class CustomerListScreen extends StatefulWidget {
 }
 
 class _CustomerListScreenState extends State<CustomerListScreen> {
+  final ScrollController _scrollController = ScrollController();
 
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+      customerProvider.loadMoreCustomers();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,63 +43,83 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Consumer<CustomerProvider>(
-              builder: (context, customerProvider, child) {
-                if (customerProvider.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: Consumer<CustomerProvider>(
+                builder: (context, customerProvider, child) {
+                  if (customerProvider.isLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
-                final customers = customerProvider.filteredCustomers;
+                  final customers = customerProvider.filteredCustomers;
 
-                if (customers.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          customerProvider.searchQuery.isNotEmpty
-                              ? 'Không tìm thấy khách hàng'
-                              : 'Chưa có khách hàng nào',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
+                  if (customers.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Colors.grey[400],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          Text(
+                            customerProvider.searchQuery.isNotEmpty
+                                ? 'Không tìm thấy khách hàng'
+                                : 'Chưa có khách hàng nào',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => customerProvider.loadCustomers(refresh: true),
+                    child: ListView.separated(
+                      controller: _scrollController,
+                      itemCount: customers.length + (customerProvider.hasMoreData && customerProvider.searchQuery.isEmpty ? 1 : 0),
+                      separatorBuilder: (context, index) {
+                        if (index == customers.length - 1 && customerProvider.hasMoreData && customerProvider.searchQuery.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return const SizedBox(height: 8);
+                      },
+                      itemBuilder: (context, index) {
+                        if (index == customers.length) {
+                          // Load more indicator
+                          return customerProvider.isLoadingMore
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(child: CircularProgressIndicator()),
+                                )
+                              : const SizedBox.shrink();
+                        }
+                        
+                        final customer = customers[index];
+                        return _buildCustomerCard(context, customer);
+                      },
                     ),
                   );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => customerProvider.loadCustomers(),
-                  child: ListView.builder(
-                    itemCount: customers.length,
-                    itemBuilder: (context, index) {
-                      final customer = customers[index];
-                      return _buildCustomerCard(context, customer);
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Navigate to add customer screen
-          // context.push('/customers/add');
+          context.push('/customers/new');
         },
         backgroundColor: Colors.blue,
         child: const Icon(Icons.add, color: Colors.white),
@@ -91,7 +131,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     return ListTile(
       tileColor: Colors.white,
       leading: CircleAvatar(
-        backgroundImage: NetworkImage(customer.avatarUrl),
+        backgroundImage: CachedNetworkImageProvider(customer.avatarUrl),
         backgroundColor: Colors.grey[300],
       ),
       title: Text(
@@ -100,6 +140,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             : customer.username,
       ),
       subtitle: Text(customer.email),
+      trailing: Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.grey[600]),
       onTap: () {
         context.push('/customers/${customer.id}');
       },

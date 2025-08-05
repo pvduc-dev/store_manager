@@ -7,10 +7,15 @@ class ProductService {
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
-  static Future<List<Product>> getProducts() async {
+  static Future<List<Product>> getProducts({
+    int page = 1, 
+    int perPage = 20,
+    String orderby = 'date',
+    String order = 'desc'
+  }) async {
     try {
       final response = await Dio().get(
-        '$baseUrl/products?per_page=36',
+        '$baseUrl/products?per_page=$perPage&page=$page&orderby=$orderby&order=$order',
         options: Options(headers: {'Authorization': basicAuth}),
       );
 
@@ -25,6 +30,33 @@ class ProductService {
       }
     } catch (e) {
       print('Exception while fetching products: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Product>> searchProducts(String query, {
+    int page = 1, 
+    int perPage = 20,
+    String orderby = 'relevance',
+    String order = 'desc'
+  }) async {
+    try {
+      final response = await Dio().get(
+        '$baseUrl/products?search=$query&per_page=$perPage&page=$page&orderby=$orderby&order=$order',
+        options: Options(headers: {'Authorization': basicAuth}),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data
+            .map((json) => Product.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        print('Error searching products: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Exception while searching products: $e');
       return [];
     }
   }
@@ -104,6 +136,32 @@ class ProductService {
       }
     } catch (e) {
       print('Exception while updating product: $e');
+      return null;
+    }
+  }
+
+  static Future<Product?> deleteProduct(List<int> productIds) async {
+    try {
+      final response = await Dio().post('$baseUrl/products/batch',
+        data: {
+          'delete': productIds,
+        },
+          options: Options(
+          headers: {
+            'Authorization': basicAuth,
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return Product.fromJson(response.data);
+      } else {
+        print('Error deleting product: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception while deleting product: $e');
       return null;
     }
   }

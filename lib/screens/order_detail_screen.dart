@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -232,15 +233,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             child: item.image != null && item.image!.src.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      item.image!.src,
+                    child: CachedNetworkImage(
+                      imageUrl: item.image!.src,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) { 
-                        return Image.asset(
-                          'assets/images/no_image.png',
-                          fit: BoxFit.cover,
-                        );
-                      },
+                      placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      errorWidget: (context, url, error) => Image.asset(
+                        'assets/images/no_image.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   )
                 : Icon(

@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/auth_provider.dart';
 import 'package:store_manager/screens/customer_detail_screen.dart';
 import 'package:store_manager/screens/customer_list_screen.dart';
+import 'package:store_manager/screens/customer_new_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
@@ -10,6 +11,7 @@ import 'package:store_manager/screens/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
 import 'package:store_manager/screens/order_list_screen.dart';
 import 'package:store_manager/screens/order_detail_screen.dart';
+import 'package:store_manager/screens/customer_edit_screen.dart';
 import 'package:store_manager/widgets/shell_widget.dart';
 
 class AppRouter {
@@ -72,9 +74,18 @@ class AppRouter {
               OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
         ),
         GoRoute(
+          path: '/customers/new',
+          builder: (context, state) => const CustomerNewScreen(),
+        ),
+        GoRoute(
           path: '/customers/:id',
           builder: (context, state) =>
               CustomerDetailScreen(customerId: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/customers/:id/edit',
+          builder: (context, state) =>
+              CustomerEditScreen(customerId: state.pathParameters['id'] ?? ''),
         ),
       ],
       // redirect: (BuildContext context, GoRouterState state) {

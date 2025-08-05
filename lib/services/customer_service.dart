@@ -6,10 +6,10 @@ class CustomerService {
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
-  static Future<List<Customer>> getCustomers({int perPage = 100}) async {
+  static Future<List<Customer>> getCustomers({int page = 1, int perPage = 20}) async {
     try {
       final response = await Dio().get(
-        '$baseUrl/customers?per_page=$perPage',
+        '$baseUrl/customers?per_page=$perPage&page=$page&orderby=registered_date&order=desc',
         options: Options(headers: {'Authorization': basicAuth}),
       );
 
@@ -116,7 +116,6 @@ class CustomerService {
     }
   }
 
-  // Tìm kiếm customer theo tên hoặc email
   static Future<List<Customer>> searchCustomers(String query) async {
     try {
       final response = await Dio().get(

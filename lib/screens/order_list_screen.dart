@@ -12,9 +12,43 @@ class OrderListScreen extends StatefulWidget {
 }
 
 class _OrderListScreenState extends State<OrderListScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      orderProvider.loadMoreOrders();
+    }
+  }
+
   Future<void> _onRefresh(BuildContext context) async {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    await orderProvider.loadOrders();
+    _searchController.clear(); // Clear search field khi refresh
+    await orderProvider.loadOrders(refresh: true);
+  }
+
+  void _handleSearch() {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    orderProvider.searchOrders(_searchController.text);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    orderProvider.clearSearch();
   }
 
   @override
@@ -31,35 +65,69 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ),
       body: Column(
         children: [
+          const SizedBox(height: 8),
           // Search Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[50],
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.search, color: Colors.grey),
-                        hintText: 'Tìm kiếm theo mã đơn hàng',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Consumer<OrderProvider>(
+              builder: (context, orderProvider, child) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onSubmitted: (value) => _handleSearch(),
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.search, color: Colors.grey),
+                            hintText: 'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            suffixIcon: orderProvider.isSearching
+                                ? IconButton(
+                                    icon: Icon(Icons.clear, color: Colors.grey),
+                                    onPressed: _clearSearch,
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
-                    ),
+                      if (!orderProvider.isSearching) ...[
+                        Container(
+                          height: 48,
+                          width: 1,
+                          color: Colors.grey[300],
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _handleSearch(),
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(8),
+                              bottomRight: Radius.circular(8),
+                            ),
+                            child: Container(
+                              padding: EdgeInsets.all(12),
+                              child: const Icon(
+                                Icons.search,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
+          const SizedBox(height: 8),
           // Order List
           Expanded(
             child: Consumer<OrderProvider>(
@@ -72,10 +140,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   return RefreshIndicator(
                     onRefresh: () => _onRefresh(context),
                     child: ListView(
-                      children: const [
+                      children: [
                         SizedBox(
                           height: 200,
-                          child: Center(child: Text('Không có đơn hàng nào')),
+                          child: Center(
+                            child: Text(
+                              orderProvider.isSearching 
+                                  ? 'Không tìm thấy đơn hàng với mã "${orderProvider.searchQuery}"'
+                                  : 'Không có đơn hàng nào',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -85,8 +160,20 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 return RefreshIndicator(
                   onRefresh: () => _onRefresh(context),
                   child: ListView.builder(
-                    itemCount: orderProvider.orders.length,
+                    controller: _scrollController,
+                    itemCount: orderProvider.orders.length + 
+                        (orderProvider.hasMoreData && !orderProvider.isSearching ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == orderProvider.orders.length && !orderProvider.isSearching) {
+                        // Load more indicator (chỉ hiển thị khi không tìm kiếm)
+                        return orderProvider.isLoadingMore
+                            ? const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(child: CircularProgressIndicator()),
+                              )
+                            : const SizedBox.shrink();
+                      }
+                      
                       final order = orderProvider.orders[index];
                       return _buildOrderItem(context, order);
                     },

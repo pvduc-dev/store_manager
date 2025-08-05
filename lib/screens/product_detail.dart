@@ -126,6 +126,7 @@ class _ProductDetailState extends State<ProductDetail> {
         'name': nameController.text.trim(),
         'description': descriptionController.text.trim(),
         'regular_price': customPriceController.text.trim(),
+        'price': customPriceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
         'meta_data': [

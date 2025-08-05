@@ -6,11 +6,17 @@ class CustomerProvider extends ChangeNotifier {
   List<Customer> _customers = [];
   Map<int, Customer> _customersMap = {};
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  int _currentPage = 1;
+  static const int _perPage = 20;
   String _searchQuery = '';
 
   List<Customer> get customers => _customers;
   Map<int, Customer> get customersMap => _customersMap;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMoreData => _hasMoreData;
   String get searchQuery => _searchQuery;
 
   // Lấy danh sách customers được lọc theo tìm kiếm
@@ -27,20 +33,59 @@ class CustomerProvider extends ChangeNotifier {
     }).toList();
   }
 
-  Future<void> loadCustomers() async {
+  Future<void> loadCustomers({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMoreData = true;
+      _customers.clear();
+      _customersMap.clear();
+    }
+    
     _isLoading = true;
     notifyListeners();
 
     try {
-      final response = await CustomerService.getCustomers();
+      final response = await CustomerService.getCustomers(page: 1, perPage: _perPage);
       _customers = response;
       _customersMap = Map.fromEntries(
         response.map((customer) => MapEntry(customer.id, customer)),
       );
+      _currentPage = 1;
+      _hasMoreData = response.length == _perPage;
     } catch (e) {
       print('Error loading customers: $e');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreCustomers() async {
+    if (_isLoadingMore || !_hasMoreData || _searchQuery.isNotEmpty) return;
+
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final nextPage = _currentPage + 1;
+      final response = await CustomerService.getCustomers(page: nextPage, perPage: _perPage);
+      
+      if (response.isNotEmpty) {
+        _customers.addAll(response);
+        for (final customer in response) {
+          _customersMap[customer.id] = customer;
+        }
+        _currentPage = nextPage;
+        _hasMoreData = response.length == _perPage;
+      } else {
+        _hasMoreData = false;
+      }
+      
+      _isLoadingMore = false;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading more customers: $e');
+      _isLoadingMore = false;
       notifyListeners();
     }
   }

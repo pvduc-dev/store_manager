@@ -1,14 +1,13 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final String customerId;
-  
-  const CustomerDetailScreen({
-    super.key,
-    required this.customerId,
-  });
+
+  const CustomerDetailScreen({super.key, required this.customerId});
 
   @override
   State<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
@@ -29,30 +28,46 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final customerId = int.tryParse(widget.customerId);
-    
+
     if (customerId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Chi tiết khách hàng')),
-        body: const Center(
-          child: Text('ID khách hàng không hợp lệ'),
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () {
+              context.go('/customers');
+            },
+            icon: const Icon(Icons.arrow_back),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
+          title: const Text('Thông tin khách hàng'),
         ),
+        body: const Center(child: Text('ID khách hàng không hợp lệ')),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chi tiết khách hàng'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: const Text('Thông tin khách hàng'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        actions: [
+          TextButton(
+            onPressed: () {
+              context.push('/customers/${customerId}/edit');
+            },
+            child: const Text('Sửa', style: TextStyle(color: Colors.blue, fontSize: 16)),
+          ),
+        ],
       ),
       body: Consumer<CustomerProvider>(
         builder: (context, customerProvider, child) {
           final customer = customerProvider.getCustomerById(customerId);
-          
+
           if (customer == null) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           return SingleChildScrollView(
@@ -62,7 +77,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               children: [
                 // Customer basic info card
                 Card(
-                  elevation: 2,
+                  color: Colors.white,
+                  elevation: 1,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -74,7 +90,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           children: [
                             CircleAvatar(
                               radius: 40,
-                              backgroundImage: NetworkImage(customer.avatarUrl),
+                              backgroundImage: CachedNetworkImageProvider(
+                                customer.avatarUrl,
+                              ),
                               backgroundColor: Colors.grey[300],
                             ),
                             const SizedBox(width: 16),
@@ -83,8 +101,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    customer.fullName.isNotEmpty 
-                                        ? customer.fullName 
+                                    customer.fullName.isNotEmpty
+                                        ? customer.fullName
                                         : customer.username,
                                     style: const TextStyle(
                                       fontSize: 20,
@@ -138,12 +156,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                     ),
                                   ),
                                   Text(
-                                    customer.isPayingCustomer ? 'Đã mua' : 'Chưa mua',
+                                    customer.isPayingCustomer
+                                        ? 'Đã mua'
+                                        : 'Chưa mua',
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
-                                      color: customer.isPayingCustomer 
-                                          ? Colors.green 
+                                      color: customer.isPayingCustomer
+                                          ? Colors.green
                                           : Colors.orange,
                                     ),
                                   ),
@@ -156,31 +176,31 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 16),
-                
+
                 // Contact information
-                const Text(
-                  'Thông tin liên hệ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Card(
-                  elevation: 2,
+                  color: Colors.white,
+                  elevation: 1,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const Text(
+                          'Thông tin liên hệ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         if (customer.billing.company.isNotEmpty)
                           ListTile(
                             leading: const Icon(Icons.business),
-                            title: const Text('Công ty'),
+                            title: const Text('Mã số thuế (NIP)'),
                             subtitle: Text(customer.billing.company),
                           ),
                         if (customer.billing.phone.isNotEmpty)
@@ -197,7 +217,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           ),
                         ListTile(
                           leading: const Icon(Icons.calendar_today),
-                          title: const Text('Ngày tham gia'),
+                          title: const Text('Ngày tạo'),
                           subtitle: Text(_formatDate(customer.dateCreated)),
                         ),
                       ],
