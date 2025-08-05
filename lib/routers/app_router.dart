@@ -17,7 +17,7 @@ import 'package:store_manager/widgets/shell_widget.dart';
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/customers',
+      initialLocation: '/products',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
