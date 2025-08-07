@@ -13,12 +13,13 @@ import 'package:store_manager/screens/order_list_screen.dart';
 import 'package:store_manager/screens/order_detail_screen.dart';
 import 'package:store_manager/screens/customer_edit_screen.dart';
 import 'package:store_manager/screens/cart_screen.dart';
+import 'package:store_manager/screens/order/order_checkout_screen.dart';
 import 'package:store_manager/widgets/shell_widget.dart';
 
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/cart',
+      initialLocation: '/',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
@@ -91,6 +92,10 @@ class AppRouter {
         GoRoute(
           path: '/cart',
           builder: (context, state) => const CartScreen(),
+        ),
+        GoRoute(
+          path: '/order/checkout',
+          builder: (context, state) => const OrderCheckoutScreen(),
         ),
       ],
       // redirect: (BuildContext context, GoRouterState state) {

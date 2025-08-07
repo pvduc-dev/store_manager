@@ -1,6 +1,6 @@
 name: store_manager
 description: "Store manager project"
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+5
 environment:
   sdk: ^3.8.1

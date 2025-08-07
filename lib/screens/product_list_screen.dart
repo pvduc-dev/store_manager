@@ -186,7 +186,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       ? Icon(Icons.check, color: Colors.blue)
                       : null,
                   onTap: () async {
-                    Navigator.pop(context);
+                    context.pop();
                     if (!isSelected) {
                       await productProvider.changeSortOption(option);
                     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/cart_provider.dart';
 import 'package:store_manager/widgets/molecule/cart_item.dart';
 import 'package:store_manager/widgets/molecule/product_search_box.dart';
@@ -29,12 +30,18 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         title: Text('Giỏ hàng'),
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
           icon: Icon(Icons.arrow_back_ios_new_rounded),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/order/checkout'),
+            icon: Icon(Icons.payment),
+          ),
+        ],
       ),
       body: Consumer<CartProvider>(
         builder: (context, cartProvider, child) {
@@ -75,7 +82,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                     child: Text('Tiếp tục mua sắm'),
                   ),
                 ],
@@ -177,7 +184,7 @@ class _CartScreenState extends State<CartScreen> {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
+                      color: Colors.grey.withValues(alpha: 0.2),
                       spreadRadius: 1,
                       blurRadius: 10,
                       offset: Offset(0, -2),
@@ -275,12 +282,12 @@ class _CartScreenState extends State<CartScreen> {
         content: Text('Bạn có muốn xóa "${item.name}" khỏi giỏ hàng?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: Text('Hủy'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              context.pop();
               try {
                 await context.read<CartProvider>().removeItem(item.key);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -306,7 +313,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _proceedToCheckout() {
-    // TODO: Navigate to order_new_screen
-    Navigator.pushNamed(context, '/order/new');
+    // Navigate to checkout screen
+    context.push('/order/checkout');
   }
 }
