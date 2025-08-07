@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:store_manager/widgets/organism/line_chart.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,24 +12,7 @@ class HomeScreen extends StatelessWidget {
       body: Column(
         children: [
           Text('Biểu đồ doanh thu'),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      FlSpot(1, 1),
-                      FlSpot(2, 2),
-                      FlSpot(3, 3),
-                      FlSpot(4, 4),
-                      FlSpot(5, 5),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          LineChartSample2(),
           SizedBox(
             height: 200,
             child: BarChart(

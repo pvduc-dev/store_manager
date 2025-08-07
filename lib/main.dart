@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/auth_provider.dart';
+import 'package:store_manager/providers/cart_provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
 import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
+import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:store_manager/services/auth_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +16,8 @@ void main() {
   final productProvider = ProductProvider();
   final orderProvider = OrderProvider();
   final customerProvider = CustomerProvider();
+  final cartProvider = CartProvider();
+  AuthService.login('phapvn', 'PhapDuy@2025');
   productProvider.loadProducts();
   orderProvider.loadOrders();
   customerProvider.loadCustomers();
@@ -22,6 +27,7 @@ void main() {
       productProvider: productProvider,
       orderProvider: orderProvider,
       customerProvider: customerProvider,
+      cartProvider: cartProvider,
     ),
   );
 }
@@ -31,12 +37,14 @@ class StoreManagerApp extends StatelessWidget {
   final ProductProvider productProvider;
   final OrderProvider orderProvider;
   final CustomerProvider customerProvider;
+  final CartProvider cartProvider;
   const StoreManagerApp({
     super.key,
     required this.authProvider,
     required this.productProvider,
     required this.orderProvider,
     required this.customerProvider,
+    required this.cartProvider,
   });
 
   @override
@@ -47,13 +55,16 @@ class StoreManagerApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: productProvider),
         ChangeNotifierProvider.value(value: orderProvider),
         ChangeNotifierProvider.value(value: customerProvider),
+        ChangeNotifierProvider.value(value: cartProvider),
       ],
-      child: MaterialApp.router(
-        routerConfig: AppRouter.appRouter(authProvider),
-        theme: ThemeData(
-          useMaterial3: true,
-          textTheme: GoogleFonts.robotoTextTheme(),
-          colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF00BABA)),
+      child: KeyboardDismissOnTap(
+        child: MaterialApp.router(
+          routerConfig: AppRouter.appRouter(authProvider),
+          theme: ThemeData(
+            useMaterial3: true,
+            textTheme: GoogleFonts.robotoTextTheme(),
+            colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF00BABA)),
+          ),
         ),
       ),
     );
