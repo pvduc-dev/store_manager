@@ -1,9 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
+import '../providers/cart_provider.dart';
+import '../widgets/molecule/product_card.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -206,12 +207,62 @@ class _ProductListScreenState extends State<ProductListScreen> {
       backgroundColor: Colors.white,
       floatingActionButton: _isSelectionMode
           ? null
-          : FloatingActionButton(
-              onPressed: () {
-                context.push('/products/add');
-              },
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.add, color: Colors.white),
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // FAB Giỏ hàng
+                Consumer<CartProvider>(
+                  builder: (context, cartProvider, child) {
+                    return Stack(
+                      children: [
+                        FloatingActionButton(
+                          onPressed: () {
+                            context.push('/cart');
+                          },
+                          backgroundColor: Colors.orange,
+                          heroTag: 'cart',
+                          child: Icon(Icons.shopping_cart, color: Colors.white),
+                        ),
+                        if (cartProvider.itemCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 20,
+                                minHeight: 20,
+                              ),
+                              child: Text(
+                                '${cartProvider.itemCount}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                SizedBox(width: 16),
+                // FAB Thêm sản phẩm
+                FloatingActionButton(
+                  onPressed: () {
+                    context.push('/products/add');
+                  },
+                  backgroundColor: Colors.blue,
+                  heroTag: 'add',
+                  child: Icon(Icons.add, color: Colors.white),
+                ),
+              ],
             ),
       bottomNavigationBar: _isSelectionMode ? _buildSelectionBottomBar() : null,
       body: SafeArea(
@@ -281,7 +332,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
-                            childAspectRatio: 0.9,
+                            childAspectRatio: 0.75, // Giảm để có thêm không gian cho action section
                           ),
                       itemCount:
                           productProvider.products.length +
@@ -305,8 +356,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           }
                         }
 
-                        return _buildProductCard(
-                          productProvider.products[index],
+                        return ProductCard(
+                          product: productProvider.products[index],
+                          isSelectionMode: _isSelectionMode,
+                          isSelected: isProductSelected(productProvider.products[index].id),
+                          onSelectionTap: () => toggleProductSelection(productProvider.products[index].id),
                         );
                       },
                     ),
@@ -591,136 +645,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildProductCard(Product product) {
-    final isSelected = isProductSelected(product.id);
-
-    return InkWell(
-      onTap: () {
-        if (_isSelectionMode) {
-          toggleProductSelection(product.id);
-        } else {
-          context.push('/products/${product.id}');
-        }
-      },
-      child: Stack(
-        children: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: (_isSelectionMode && isSelected)
-                    ? Colors.blue
-                    : Colors.grey[300]!,
-                width: (_isSelectionMode && isSelected) ? 2 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.08),
-                  spreadRadius: 1,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    color: Colors.grey[200],
-                    image: product.images.isNotEmpty
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              product.images.first.src ?? '',
-                            ),
-                            fit: BoxFit.cover,
-                            onError: (exception, stackTrace) {
-                              return;
-                            },
-                          )
-                        : null,
-                  ),
-                  child: product.images.isEmpty
-                      ? Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 40,
-                          ),
-                        )
-                      : null,
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${product.metaData.where((element) => element.key == 'custom_price').firstOrNull?.value ?? ''} zł',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.red,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_isSelectionMode)
-            Positioned(
-              top: 16,
-              right: 16,
-              child: GestureDetector(
-                onTap: () {
-                  toggleProductSelection(product.id);
-                },
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.blue : Colors.white,
-                    border: Border.all(
-                      color: isSelected ? Colors.blue : Colors.grey[400]!,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: isSelected
-                      ? Icon(Icons.check, color: Colors.white, size: 16)
-                      : null,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

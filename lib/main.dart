@@ -8,19 +8,23 @@ import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
-import 'package:store_manager/services/auth_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   final authProvider = AuthProvider();
   final productProvider = ProductProvider();
   final orderProvider = OrderProvider();
   final customerProvider = CustomerProvider();
   final cartProvider = CartProvider();
-  AuthService.login('phapvn', 'PhapDuy@2025');
+  
+  // Khởi tạo CartProvider với Hive
+  await cartProvider.initialize();
+  
   productProvider.loadProducts();
   orderProvider.loadOrders();
   customerProvider.loadCustomers();
+  
   runApp(
     StoreManagerApp(
       authProvider: authProvider,

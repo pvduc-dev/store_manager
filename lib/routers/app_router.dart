@@ -6,6 +6,7 @@ import 'package:store_manager/screens/customer_new_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
+import 'package:store_manager/screens/order_new_screen.dart';
 import 'package:store_manager/screens/product_detail.dart';
 import 'package:store_manager/screens/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
@@ -13,12 +14,13 @@ import 'package:store_manager/screens/order_list_screen.dart';
 import 'package:store_manager/screens/order_detail_screen.dart';
 import 'package:store_manager/screens/customer_edit_screen.dart';
 import 'package:store_manager/screens/cart_screen.dart';
+import 'package:store_manager/screens/design_system_screen.dart';
 import 'package:store_manager/widgets/shell_widget.dart';
 
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/cart',
+      initialLocation: '/design-system',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
@@ -70,6 +72,10 @@ class AppRouter {
               ProductDetail(id: state.pathParameters['id'] ?? ''),
         ),
         GoRoute(
+          path: '/orders/new',
+          builder: (context, state) => const OrderNewScreen(),
+        ),
+        GoRoute(
           path: '/orders/:id',
           builder: (context, state) =>
               OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
@@ -91,6 +97,10 @@ class AppRouter {
         GoRoute(
           path: '/cart',
           builder: (context, state) => const CartScreen(),
+        ),
+        GoRoute(
+          path: '/design-system',
+          builder: (context, state) => const DesignSystemScreen(),
         ),
       ],
       // redirect: (BuildContext context, GoRouterState state) {

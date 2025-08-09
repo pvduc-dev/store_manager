@@ -178,4 +178,41 @@ class OrderProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<Order?> createOrder({
+    required Map<String, dynamic> billingInfo,
+    required List<Map<String, dynamic>> lineItems,
+    String paymentMethod = 'cod',
+    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String? customerNote,
+    String? discount,
+  }) async {
+    try {
+      final newOrder = await OrderService.createOrder(
+        billingInfo: billingInfo,
+        lineItems: lineItems,
+        paymentMethod: paymentMethod,
+        paymentMethodTitle: paymentMethodTitle,
+        customerNote: customerNote,
+        feeLines: [
+          {
+            'name': 'discount',
+            // đây là phần tiền được discount
+            'total': discount,
+          },
+        ],
+      );
+      
+      if (newOrder != null) {
+        _orders.insert(0, newOrder);
+        _ordersMap[newOrder.id] = newOrder;
+        notifyListeners();
+        return newOrder;
+      }
+      return null;
+    } catch (e) {
+      print('Error creating order: $e');
+      return null;
+    }
+  }
 }

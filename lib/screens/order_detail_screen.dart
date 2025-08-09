@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../providers/order_provider.dart';
+import 'package:store_manager/utils/currency_formatter.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -145,8 +146,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             const SizedBox(height: 16),
                             
                             // Amount Info
-                            _buildInfoRow('Đơn giá', '', '${double.parse(order.total).toInt()}${order.currencySymbol}', Colors.red),
-                            _buildInfoRow('Đã thanh toán', '', '0${order.currencySymbol}', Colors.black),
+                            _buildInfoRow('Đơn giá', '', CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol), Colors.red),
+                            _buildInfoRow('Đã thanh toán', '', CurrencyFormatter.formatWithSymbol(0, order.currencySymbol), Colors.black),
                             const SizedBox(height: 8),
                             _buildInfoRow('Số sản phẩm', '', '${order.lineItems.length} sản phẩm', Colors.black),
                             const SizedBox(height: 8),
@@ -288,7 +289,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${item.price.toInt()} zł',
+                CurrencyFormatter.formatPLN(item.price),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

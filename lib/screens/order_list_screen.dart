@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../providers/order_provider.dart';
+import 'package:store_manager/utils/currency_formatter.dart';
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});
@@ -256,7 +257,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${double.parse(order.total).toInt()} ${order.currencySymbol}',
+                  CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:store_manager/models/cart.dart';
-import 'package:store_manager/services/cart_service.dart';
+import 'package:store_manager/models/offline_cart.dart';
+import 'package:store_manager/services/offline_cart_service.dart';
 
 class CartProvider extends ChangeNotifier {
-  Cart? cart;
+  OfflineCart? offlineCart;
   bool isLoading = false;
+
+  Future<void> initialize() async {
+    await OfflineCartService.initialize();
+    await getCart();
+  }
 
   Future<void> getCart() async {
     try {
       isLoading = true;
       notifyListeners();
-      cart = await CartService.getCart();
+      
+      offlineCart = await OfflineCartService.getCart();
     } catch (e) {
-      // Handle error - có thể show snackbar hoặc log error
       print('Error loading cart: $e');
     } finally {
       isLoading = false;
@@ -20,86 +25,125 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateItemQuantity(String cartItemKey, int quantity) async {
+  Future<void> addItemToCart({
+    required int productId,
+    required String name,
+    required String price,
+    required int quantity,
+    String? imageUrl,
+    String? description,
+  }) async {
     try {
-      isLoading = true;
-      notifyListeners();
-      // TODO: Cần nonce header cho API
-      // cart = await CartService.updateItem(cartItemKey, quantity, nonceHeader);
+      final item = OfflineCartItem(
+        productId: productId,
+        name: name,
+        price: price,
+        quantity: quantity,
+        imageUrl: imageUrl,
+        description: description,
+        addedAt: DateTime.now(),
+      );
       
-      // Tạm thời update local cho demo
-      if (cart != null) {
-        final itemIndex = cart!.items.indexWhere((item) => item.key == cartItemKey);
-        if (itemIndex != -1) {
-          // Do CartItem immutable, ta cần reload lại cart từ server
-          await getCart();
-        }
-      }
-    } catch (e) {
-      print('Error updating item quantity: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateItemPrice(String cartItemKey, String newPrice) async {
-    try {
-      isLoading = true;
-      notifyListeners();
-      // TODO: Cần API endpoint để update giá sản phẩm
-      // Hiện tại chưa có API cho việc này, có thể cần custom API
+      // Chỉ cập nhật qua service để tránh duplicate
+      await OfflineCartService.addItem(item);
       
-      // Tạm thời log cho demo
-      print('Updating price for item $cartItemKey to $newPrice');
-      
-      // Reload cart để có data mới nhất
+      // Sau đó load lại từ storage để đồng bộ state
       await getCart();
     } catch (e) {
-      print('Error updating item price: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      print('Error adding item to cart: $e');
+      // Nếu lỗi thì load lại từ storage
+      await getCart();
     }
   }
 
-  Future<void> removeItem(String cartItemKey) async {
+  Future<void> updateItemQuantity(int productId, int quantity) async {
     try {
-      isLoading = true;
-      notifyListeners();
-      // TODO: Cần nonce header cho API
-      // cart = await CartService.removeItem(cartItemKey, nonceHeader);
+      // Chỉ cập nhật qua service để tránh duplicate
+      await OfflineCartService.updateItemQuantity(productId, quantity);
       
-      // Tạm thời remove local cho demo
-      if (cart != null) {
-        // Do Cart immutable, ta cần reload lại cart từ server
+      // Sau đó load lại từ storage để đồng bộ state
+      await getCart();
+    } catch (e) {
+      print('Error updating item quantity: $e');
+      // Nếu lỗi thì load lại từ storage
+      await getCart();
+    }
+  }
+
+  Future<void> updateItemPrice(int productId, String newPrice) async {
+    try {
+      final currentItem = offlineCart?.getItem(productId);
+      if (currentItem != null) {
+        // Tạo item mới với giá mới
+        final updatedItem = OfflineCartItem(
+          productId: productId,
+          name: currentItem.name,
+          price: newPrice,
+          quantity: currentItem.quantity,
+          imageUrl: currentItem.imageUrl,
+          description: currentItem.description,
+          addedAt: currentItem.addedAt,
+        );
+
+        // Chỉ cập nhật qua service để tránh duplicate
+        await OfflineCartService.removeItem(productId);
+        await OfflineCartService.addItem(updatedItem);
+        
+        // Sau đó load lại từ storage để đồng bộ state
         await getCart();
       }
     } catch (e) {
+      print('Error updating item price: $e');
+      // Nếu lỗi thì load lại từ storage
+      await getCart();
+    }
+  }
+
+  Future<void> removeItem(int productId) async {
+    try {
+      // Chỉ cập nhật qua service để tránh duplicate
+      await OfflineCartService.removeItem(productId);
+      
+      // Sau đó load lại từ storage để đồng bộ state
+      await getCart();
+    } catch (e) {
       print('Error removing item: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      // Nếu lỗi thì load lại từ storage
+      await getCart();
     }
   }
 
   Future<void> clearCart() async {
     try {
-      isLoading = true;
-      notifyListeners();
-      // TODO: Cần nonce header cho API
-      // cart = await CartService.clearCart(nonceHeader);
+      // Chỉ cập nhật qua service để tránh duplicate
+      await OfflineCartService.clearCart();
       
-      // Tạm thời clear local cho demo
+      // Sau đó load lại từ storage để đồng bộ state
       await getCart();
     } catch (e) {
       print('Error clearing cart: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      // Nếu lỗi thì load lại từ storage
+      await getCart();
     }
   }
 
-  int get itemCount => cart?.itemsCount ?? 0;
-  String get totalPrice => cart?.totals.totalPrice ?? '0';
+  // Getters cho cart
+  int get itemCount => offlineCart?.itemsCount ?? 0;
+  String get totalPrice => offlineCart?.totalPrice ?? '0';
+  List<OfflineCartItem> get offlineItems => offlineCart?.items ?? [];
+
+  // Helper methods
+  bool hasItem(int productId) {
+    return offlineCart?.hasItem(productId) ?? false;
+  }
+
+  OfflineCartItem? getItem(int productId) {
+    return offlineCart?.getItem(productId);
+  }
+
+  @override
+  void dispose() {
+    OfflineCartService.close();
+    super.dispose();
+  }
 }

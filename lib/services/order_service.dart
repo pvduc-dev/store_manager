@@ -60,4 +60,41 @@ class OrderService {
       return null;
     }
   }
+
+  /// Tạo đơn hàng mới
+  static Future<Order?> createOrder({
+    required Map<String, dynamic> billingInfo,
+    required List<Map<String, dynamic>> lineItems,
+    required List<Map<String, dynamic>> feeLines,
+    String paymentMethod = 'cod',
+    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String? customerNote,
+  }) async {
+    try {
+      final orderData = {
+        'payment_method': paymentMethod,
+        'payment_method_title': paymentMethodTitle,
+        'set_paid': false,
+        'status': 'processing',
+        'billing': billingInfo,
+        'shipping': billingInfo, // Use billing info for shipping too
+        'line_items': lineItems,
+        'fee_lines': feeLines,
+        'customer_note': customerNote ?? '',
+      };
+
+      final response = await Dio().post(
+        '$baseUrl/orders',
+        data: orderData,
+        options: Options(headers: {'Authorization': basicAuth})
+      );
+      return Order.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('Error creating order: $e');
+      if (e is DioException) {
+        print('Error details: ${e.response?.data}');
+      }
+      return null;
+    }
+  }
 }

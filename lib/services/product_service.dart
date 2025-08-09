@@ -42,7 +42,7 @@ class ProductService {
   }) async {
     try {
       final response = await Dio().get(
-        '$baseUrl/products?search=$query&per_page=$perPage&page=$page&orderby=$orderby&order=$order',
+        '$baseUrl/products?search=$query&per_page=$perPage&page=$page&order_by=$orderby&order=$order',
         options: Options(headers: {'Authorization': basicAuth}),
       );
 

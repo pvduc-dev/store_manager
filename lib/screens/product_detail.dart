@@ -410,9 +410,6 @@ class _ProductDetailState extends State<ProductDetail> {
                       TextFormField(
                         controller: customPriceController,
                         keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                        ],
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
                           labelText: 'Giá bán',
@@ -466,24 +463,44 @@ class _ProductDetailState extends State<ProductDetail> {
               ),
             ),
       bottomNavigationBar: Container(
-        height: 100,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FilledButton(
+        padding: const EdgeInsets.all(16),
+        child: SafeArea(
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
               onPressed: (isSaving || isUploading) ? null : _saveProduct,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: isSaving
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : isUploading
-                  ? const Text('Đang upload...')
-                  : const Text('Lưu thay đổi'),
+                      ? const Text(
+                          'Đang upload...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : const Text(
+                          'Lưu thay đổi',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -327,9 +327,6 @@ class _NewProductScreenState extends State<NewProductScreen> {
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                  ],
                 ),
                 const SizedBox(height: 24),
 

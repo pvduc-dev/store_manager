@@ -1,12 +1,720 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:store_manager/providers/cart_provider.dart';
+import 'package:store_manager/providers/order_provider.dart';
+import 'package:store_manager/models/customer.dart';
+import 'package:store_manager/widgets/molecule/customer_search_box.dart';
+import 'package:store_manager/utils/currency_formatter.dart';
 
-class OrderNewScreen extends StatelessWidget {
+class OrderNewScreen extends StatefulWidget {
   const OrderNewScreen({super.key});
+
+  @override
+  State<OrderNewScreen> createState() => _OrderNewScreenState();
+}
+
+class _OrderNewScreenState extends State<OrderNewScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _customerSearchController = CustomerSearchController();
+
+  // Form controllers
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _taxCodeController = TextEditingController();
+  final _address1Controller = TextEditingController();
+  final _cityController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _noteController = TextEditingController();
+  final _discountController = TextEditingController();
+
+  // Payment method
+  String _paymentMethod = 'Thanh toán khi nhận hàng';
+
+  // Discount rate
+  double _discountRate = 1.23;
+
+  // Customer selection
+  Customer? _selectedCustomer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set default discount value
+    _discountController.text = _discountRate.toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _taxCodeController.dispose();
+    _address1Controller.dispose();
+    _cityController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _noteController.dispose();
+    _discountController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Checkout')),
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Thông tin đặt hàng'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          onPressed: () {
+            context.go('/cart');
+          },
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        ),
+      ),
+      body: Consumer<CartProvider>(
+        builder: (context, cartProvider, child) {
+          if (cartProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 100, // Padding để tránh button
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Information Form
+                  _buildCustomerForm(),
+
+                  const SizedBox(height: 32),
+
+                  // Order Summary
+                  _buildOrderSummary(cartProvider),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: Consumer<CartProvider>(
+        builder: (context, cartProvider, child) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+            ),
+            child: _buildCheckoutButton(),
+          );
+        },
+      ),
     );
+  }
+
+  Widget _buildCustomerForm() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Customer Name with Search
+          CustomerSearchBox(
+            controller: _firstNameController, // Use external controller
+            searchController: _customerSearchController, // Use search controller
+            onCustomerSelected: (Customer customer) {
+              _fillCustomerInfo(customer);
+            },
+            validator: (value) =>
+                value?.isEmpty == true ? 'Vui lòng nhập tên' : null,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tax Code (NIP)
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextFormField(
+              controller: _taxCodeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'NIP (tùy chọn)',
+                hintText: 'Nhập mã số thuế',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Address
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextFormField(
+              controller: _address1Controller,
+              decoration: const InputDecoration(
+                labelText: 'Địa chỉ *',
+                hintText: 'Nhập địa chỉ',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Vui lòng nhập địa chỉ' : null,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Phone
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Số điện thoại *',
+                hintText: 'Nhập số điện thoại',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Vui lòng nhập số điện thoại' : null,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Email
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Địa chỉ email *',
+                hintText: 'Nhập email',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              validator: (value) {
+                if (value?.isEmpty == true) return 'Vui lòng nhập email';
+                if (!RegExp(
+                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                ).hasMatch(value!)) {
+                  return 'Email không hợp lệ';
+                }
+                return null;
+              },
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Order Notes
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextFormField(
+              controller: _noteController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Ghi chú đơn hàng (tùy chọn)',
+                hintText: 'Ghi chú về đơn hàng',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                alignLabelWithHint: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderSummary(CartProvider cartProvider) {
+    final items = cartProvider.offlineItems;
+    if (items.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text(
+            'Giỏ hàng trống',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // Gross total (fixed, based on original product prices)
+    double grossTotal = 0;
+    for (var item in items) {
+      double price = double.tryParse(item.price) ?? 0;
+      grossTotal += price * item.quantity;
+    }
+
+    // Calculate net price with discount
+    double netTotal = grossTotal / _discountRate;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Product List
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              double price = double.tryParse(item.price) ?? 0;
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Product Image
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[100],
+                      ),
+                      child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                item.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.image, color: Colors.grey),
+                              ),
+                            )
+                          : const Icon(Icons.image, color: Colors.grey),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Product Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'x ${item.quantity}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Price
+                    Text(
+                      CurrencyFormatter.formatPLN(price * item.quantity),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // Summary Section
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Subtotal (Gross total - fixed)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Tổng cộng:', style: TextStyle(fontSize: 16)),
+                    Text(
+                      CurrencyFormatter.formatPLN(grossTotal),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Razem (Netto):',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    // Ô nhập chiết khấu
+                    SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: _discountController,
+                        decoration: const InputDecoration(
+                          hintText: '1.23',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _discountRate = double.tryParse(value) ?? 1.23;
+                          });
+                        },
+                      ),
+                    ),
+                    Text(
+                      CurrencyFormatter.formatPLN(netTotal),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Suma (Brutto):',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      CurrencyFormatter.formatPLN(grossTotal),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Billing Address
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Địa chỉ thanh toán',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_firstNameController.text.isNotEmpty)
+                        Text(
+                          _firstNameController.text,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      if (_taxCodeController.text.isNotEmpty)
+                        Text(
+                          _taxCodeController.text,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      if (_address1Controller.text.isNotEmpty)
+                        Text(
+                          _address1Controller.text,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      if (_phoneController.text.isNotEmpty)
+                        Text(
+                          _phoneController.text,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            _processCheckout();
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'ĐẶT HÀNG',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  void _fillCustomerInfo(Customer customer) {
+    setState(() {
+      _selectedCustomer = customer;
+
+      // Fill customer information into form fields
+      // Use setText method to avoid triggering search
+      _customerSearchController.setText(customer.fullName);
+      _taxCodeController.text = customer.billingCompany;
+      _address1Controller.text = customer.billingAddress;
+      _phoneController.text = customer.billingPhone;
+      _emailController.text = customer.email;
+    });
+  }
+
+  void _processCheckout() async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+
+    final items = cartProvider.offlineItems;
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Giỏ hàng trống!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Đang tạo đơn hàng...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Calculate gross total for order notes
+      double grossTotal = 0;
+      for (var item in items) {
+        double price = double.tryParse(item.price) ?? 0;
+        grossTotal += price * item.quantity;
+      }
+
+      // Prepare billing info
+      final fullName = _firstNameController.text.split(' ');
+      final firstName = fullName.isNotEmpty ? fullName.first : '';
+      final lastName = fullName.length > 1 ? fullName.sublist(1).join(' ') : '';
+
+      final billingInfo = {
+        'first_name': firstName,
+        'last_name': lastName,
+        'company': _taxCodeController.text,
+        'address_1': _address1Controller.text,
+        'address_2': '',
+        'city': _cityController.text,
+        'state': '',
+        'postcode': '',
+        'email': _emailController.text,
+        'phone': _phoneController.text,
+      };
+
+      // Prepare line items with original price (no discount applied here)
+      final lineItems = items.map((item) {
+        double basePrice = double.tryParse(item.price) ?? 0;
+        return {
+          'product_id': item.productId,
+          'quantity': item.quantity,
+          'total': '${basePrice * item.quantity}',
+        };
+      }).toList();
+
+      // Calculate discount amount (số tiền được giảm - số âm)
+      double netTotal = grossTotal / _discountRate;
+      double discountAmount = -(grossTotal - netTotal);
+
+      // Prepare customer note with discount info
+      String customerNote = _noteController.text.trim();
+      if (customerNote.isNotEmpty) {
+        customerNote += '\n';
+      }
+      customerNote +=
+          'Discount rate: ${_discountRate.toStringAsFixed(2)} | Gross total: ${CurrencyFormatter.formatPLN(grossTotal)} | Net total: ${CurrencyFormatter.formatPLN(netTotal)} | Discount amount: ${CurrencyFormatter.formatPLN(discountAmount)}';
+      if (_selectedCustomer != null) {
+        customerNote += '\nCustomer ID: ${_selectedCustomer!.id}';
+      }
+
+      // Create order
+      final order = await orderProvider.createOrder(
+        billingInfo: billingInfo,
+        lineItems: lineItems,
+        paymentMethod: 'cod',
+        paymentMethodTitle: _paymentMethod,
+        customerNote: customerNote,
+        discount: discountAmount.toString(),
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (order != null) {
+        // Clear cart after successful order
+        await cartProvider.clearCart();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đặt hàng thành công! Mã đơn hàng: ${order.number}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate back to home or order list
+        context.go('/orders');
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }
