@@ -6,8 +6,8 @@ import 'package:store_manager/screens/customer_new_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
-import 'package:store_manager/screens/product_detail.dart';
-import 'package:store_manager/screens/product_list_screen.dart';
+import 'package:store_manager/screens/product/product_detail.dart';
+import 'package:store_manager/screens/product/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
 import 'package:store_manager/screens/order_list_screen.dart';
 import 'package:store_manager/screens/order_detail_screen.dart';
@@ -81,18 +81,16 @@ class AppRouter {
         ),
         GoRoute(
           path: '/customers/:id',
-          builder: (context, state) =>
-              CustomerDetailScreen(customerId: state.pathParameters['id'] ?? ''),
+          builder: (context, state) => CustomerDetailScreen(
+            customerId: state.pathParameters['id'] ?? '',
+          ),
         ),
         GoRoute(
           path: '/customers/:id/edit',
           builder: (context, state) =>
               CustomerEditScreen(customerId: state.pathParameters['id'] ?? ''),
         ),
-        GoRoute(
-          path: '/cart',
-          builder: (context, state) => const CartScreen(),
-        ),
+        GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
         GoRoute(
           path: '/order/checkout',
           builder: (context, state) => const OrderCheckoutScreen(),

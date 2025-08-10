@@ -56,6 +56,7 @@ class ProductProvider extends ChangeNotifier {
         orderby: _sortOption.orderby,
         order: _sortOption.order,
       );
+
       _products = response;
       _productsMap = Map.fromEntries(
         response.map((product) => MapEntry(product.id, product)),

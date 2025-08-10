@@ -6,9 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../models/product.dart';
-import '../providers/product_provider.dart';
-import '../services/product_service.dart';
+import 'package:store_manager/models/product.dart';
+import 'package:store_manager/providers/product_provider.dart';
+import 'package:store_manager/services/product_service.dart';
 
 class ProductDetail extends StatefulWidget {
   final String id;
@@ -269,7 +269,9 @@ class _ProductDetailState extends State<ProductDetail> {
                                       Positioned.fill(
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(0.5),
+                                            color: Colors.black.withOpacity(
+                                              0.5,
+                                            ),
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
@@ -338,7 +340,8 @@ class _ProductDetailState extends State<ProductDetail> {
                                         fit: BoxFit.contain,
                                         placeholder: (context, url) =>
                                             const Center(
-                                              child: CircularProgressIndicator(),
+                                              child:
+                                                  CircularProgressIndicator(),
                                             ),
                                         errorWidget: (context, url, error) {
                                           return Column(
@@ -409,9 +412,14 @@ class _ProductDetailState extends State<ProductDetail> {
                       // Custom Price
                       TextFormField(
                         controller: customPriceController,
-                        keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}'),
+                          ),
                         ],
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(

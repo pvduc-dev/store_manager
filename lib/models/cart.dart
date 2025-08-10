@@ -39,14 +39,20 @@ class Cart {
 
   factory Cart.fromJson(Map<String, dynamic> json) {
     return Cart(
-      items: (json['items'] as List<dynamic>)
-          .map((item) => CartItem.fromJson(item))
-          .toList(),
+      items: (json['items'] as List<dynamic>?)
+          ?.map((item) => CartItem.fromJson(item))
+          .toList() ?? [],
       coupons: json['coupons'] ?? [],
       fees: json['fees'] ?? [],
-      totals: CartTotals.fromJson(json['totals']),
-      shippingAddress: Address.fromJson(json['shipping_address']),
-      billingAddress: Address.fromJson(json['billing_address']),
+      totals: json['totals'] != null 
+          ? CartTotals.fromJson(json['totals'])
+          : CartTotals.empty(),
+      shippingAddress: json['shipping_address'] != null
+          ? Address.fromJson(json['shipping_address'])
+          : Address.empty(),
+      billingAddress: json['billing_address'] != null
+          ? Address.fromJson(json['billing_address'])
+          : Address.empty(),
       needsPayment: json['needs_payment'] ?? false,
       needsShipping: json['needs_shipping'] ?? false,
       paymentRequirements: List<String>.from(json['payment_requirements'] ?? []),
@@ -459,6 +465,29 @@ class CartTotals {
     required this.currencySuffix,
   });
 
+  factory CartTotals.empty() {
+    return CartTotals(
+      totalItems: '0',
+      totalItemsTax: '0',
+      totalFees: '0',
+      totalFeesTax: '0',
+      totalDiscount: '0',
+      totalDiscountTax: '0',
+      totalShipping: '0',
+      totalShippingTax: '0',
+      totalPrice: '0',
+      totalTax: '0',
+      taxLines: [],
+      currencyCode: 'PLN',
+      currencySymbol: 'zł',
+      currencyMinorUnit: 2,
+      currencyDecimalSeparator: '.',
+      currencyThousandSeparator: ',',
+      currencyPrefix: '',
+      currencySuffix: ' zł',
+    );
+  }
+
   factory CartTotals.fromJson(Map<String, dynamic> json) {
     return CartTotals(
       totalItems: json['total_items'] ?? '',
@@ -532,6 +561,22 @@ class Address {
     required this.phone,
     this.email,
   });
+
+  factory Address.empty() {
+    return Address(
+      firstName: '',
+      lastName: '',
+      company: '',
+      address1: '',
+      address2: '',
+      city: '',
+      state: '',
+      postcode: '',
+      country: '',
+      phone: '',
+      email: '',
+    );
+  }
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
