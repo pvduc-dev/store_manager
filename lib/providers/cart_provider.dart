@@ -11,10 +11,10 @@ class CartProvider extends ChangeNotifier {
     try {
       isLoading = true;
       notifyListeners();
+      print('API: Getting cart...');
       cart = await CartService.getCart();
     } catch (e) {
       // Handle error - có thể show snackbar hoặc log error
-      print('Error loading cart: $e');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -26,33 +26,25 @@ class CartProvider extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
       
-      print('CartProvider: Adding item $productId with quantity $quantity');
+      print('API: Adding item to cart...');
       
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
       // API đã trả về Cart object mới, không cần gọi getCart() thêm
       final newCart = await CartService.addItem(productId, nonce, quantity: quantity);
       
-      print('CartProvider: Received new cart with ${newCart.items.length} items');
-      print('CartProvider: New cart total: ${newCart.totals.totalPrice}');
-      
       cart = newCart;
-      
-      print('CartProvider: Cart updated successfully');
     } catch (e) {
-      print('CartProvider: Error adding item to cart: $e');
       // Nếu có lỗi, thử refresh cart để đảm bảo UI sync với server
       try {
         await refreshCart();
-        print('CartProvider: Cart refreshed after error');
       } catch (refreshError) {
-        print('CartProvider: Error refreshing cart: $refreshError');
+        // Silent fail
       }
       rethrow; // Rethrow để UI có thể handle error
     } finally {
       isLoading = false;
       notifyListeners();
-      print('CartProvider: addItemToCart completed, isLoading: $isLoading');
     }
   }
 
@@ -69,8 +61,7 @@ class CartProvider extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
       
-      print('CartProvider: Updating item $cartItemKey to quantity $quantity');
-      print('CartProvider: Current cart has ${cart?.items.length ?? 0} items before update');
+      print('API: Updating item quantity...');
       
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
@@ -78,42 +69,31 @@ class CartProvider extends ChangeNotifier {
       // Thử update item
       final newCart = await CartService.updateItem(cartItemKey, quantity, nonce);
       
-      print('CartProvider: Received updated cart with ${newCart.items.length} items');
-      print('CartProvider: Updated cart total: ${newCart.totals.totalPrice}');
-      
       // Validate cart data trước khi assign
       if (!_validateCartData(newCart)) {
-        print('CartProvider: WARNING - New cart data is invalid, using fallback');
         // Fallback: refresh cart từ server
         await refreshCart();
       } else if (newCart.items.isEmpty && backupCart != null && backupCart.items.isNotEmpty) {
-        print('CartProvider: WARNING - New cart is empty but backup had items, using fallback');
         // Fallback: refresh cart từ server
         await refreshCart();
       } else {
         cart = newCart;
-        print('CartProvider: Cart quantity updated successfully');
       }
       
     } catch (e) {
-      print('CartProvider: Error updating item quantity: $e');
-      
       // Restore backup cart
       cart = backupCart;
-      print('CartProvider: Restored backup cart');
       
       // Thử refresh cart để đảm bảo UI sync với server
       try {
         await refreshCart();
-        print('CartProvider: Cart refreshed after update error');
       } catch (refreshError) {
-        print('CartProvider: Error refreshing cart: $refreshError');
+        // Silent fail
       }
       rethrow; // Rethrow để UI có thể handle error
     } finally {
       isLoading = false;
       notifyListeners();
-      print('CartProvider: updateItemQuantity completed, final cart has ${cart?.items.length ?? 0} items');
     }
   }
 
@@ -122,17 +102,16 @@ class CartProvider extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
       
+      print('API: Updating item price...');
+      
       // TODO: Cần API endpoint để update giá sản phẩm
       // Hiện tại chưa có API cho việc này, có thể cần custom API
       // Khi có API, sẽ trả về Cart object mới và không cần gọi getCart()
       
-      // Tạm thời log cho demo và reload cart
-      print('Updating price for item $cartItemKey to $newPrice');
-      
       // Chỉ reload khi thực sự cần thiết (khi chưa có API riêng)
       cart = await CartService.getCart();
     } catch (e) {
-      print('Error updating item price: $e');
+      // Silent fail
     } finally {
       isLoading = false;
       notifyListeners();
@@ -144,12 +123,13 @@ class CartProvider extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
       
+      print('API: Removing item from cart...');
+      
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
       // API đã trả về Cart object mới, không cần gọi getCart() thêm
       cart = await CartService.removeItem(cartItemKey, nonce);
     } catch (e) {
-      print('Error removing item: $e');
       rethrow; // Rethrow để UI có thể handle error
     } finally {
       isLoading = false;
@@ -162,12 +142,13 @@ class CartProvider extends ChangeNotifier {
       isLoading = true;
       notifyListeners();
       
+      print('API: Clearing cart...');
+      
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
       // API đã trả về Cart object mới, không cần gọi getCart() thêm
       cart = await CartService.clearCart(nonce);
     } catch (e) {
-      print('Error clearing cart: $e');
       rethrow; // Rethrow để UI có thể handle error
     } finally {
       isLoading = false;
@@ -182,22 +163,15 @@ class CartProvider extends ChangeNotifier {
 
   /// Force notify listeners để refresh UI
   void forceNotify() {
-    print('CartProvider: Force notifying listeners');
     notifyListeners();
   }
 
   /// Validate cart data integrity
   bool _validateCartData(Cart? cartData) {
     if (cartData == null) {
-      print('CartProvider: Cart data is null');
       return false;
     }
     
-    if (cartData.totals.totalPrice.isEmpty || cartData.totals.totalPrice == '0') {
-      print('CartProvider: Cart total price is empty or zero');
-    }
-    
-    print('CartProvider: Cart validation - ${cartData.items.length} items, total: ${cartData.totals.totalPrice}');
     return true;
   }
 
@@ -206,16 +180,12 @@ class CartProvider extends ChangeNotifier {
 
   /// Lấy số lượng items trong cart
   int get itemCount {
-    final count = cart?.itemsCount ?? 0;
-    print('CartProvider: itemCount getter called, returning: $count');
-    return count;
+    return cart?.itemsCount ?? 0;
   }
   
   /// Lấy tổng giá trị cart
   String get totalPrice {
-    final price = cart?.totals.totalPrice ?? '0';
-    print('CartProvider: totalPrice getter called, returning: $price');
-    return price;
+    return cart?.totals.totalPrice ?? '0';
   }
   
   /// Kiểm tra cart có trống hay không

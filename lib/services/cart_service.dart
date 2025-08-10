@@ -58,8 +58,7 @@ class CartService {
         headers['Nonce'] = nonceHeader; // Thêm cả 2 format để đảm bảo
       }
 
-      print('Adding item $productId with quantity $quantity to cart');
-      print('Using nonce: ${nonceHeader.isNotEmpty ? "${nonceHeader.substring(0, 8)}..." : "empty"}');
+
 
       final response = await dio.post(
         '/cart/add-item',
@@ -79,7 +78,6 @@ class CartService {
       }
     } on DioException catch (e) {
       if (e.response != null) {
-        print('Add item error response: ${e.response?.data}');
         throw Exception('Failed to add item to cart: ${e.response?.statusCode} - ${e.response?.data}');
       } else {
         throw Exception('Network error: ${e.message}');
@@ -103,8 +101,7 @@ class CartService {
         headers['Nonce'] = nonceHeader; // Thêm cả 2 format để đảm bảo
       }
 
-      print('Updating cart item $cartItemKey with quantity $quantity');
-      print('Using nonce: ${nonceHeader.isNotEmpty ? "${nonceHeader.substring(0, 8)}..." : "empty"}');
+
 
       final response = await dio.put(
         '/cart/items/$cartItemKey',
@@ -116,23 +113,12 @@ class CartService {
         // Cập nhật nonce mới nếu có trong response
         _updateNonceFromResponse(response);
         
-        // Debug: Log response structure
-        print('Update item response data: ${response.data}');
-        
-        try {
-          return Cart.fromJson(response.data);
-        } catch (e) {
-          print('Error parsing Cart from JSON: $e');
-          print('Response data type: ${response.data.runtimeType}');
-          print('Response data: ${response.data}');
-          rethrow;
-        }
+        return Cart.fromJson(response.data);
       } else {
         throw Exception('Failed to update item in cart: ${response.statusCode}');
       }
     } on DioException catch (e) {
       if (e.response != null) {
-        print('Update item error response: ${e.response?.data}');
         throw Exception('Failed to update item: ${e.response?.statusCode} - ${e.response?.data}');
       } else {
         throw Exception('Network error: ${e.message}');

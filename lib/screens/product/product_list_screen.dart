@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -24,6 +25,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   // NumberFormat cho việc format số tiền
   final NumberFormat _numberFormat = NumberFormat('#,##0', 'vi_VN');
+  
+  // Local state management cho optimistic updates
+  final Map<String, int> _localQuantities = {}; // Quantity hiển thị trên UI
+  final Map<String, Timer?> _debounceTimers = {}; // Timer cho mỗi item
+  final Set<String> _pendingUpdates = {}; // Track items đang chờ API call
 
   @override
   void initState() {
@@ -47,6 +53,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
+    
+    // Cleanup timers
+    for (var timer in _debounceTimers.values) {
+      timer?.cancel();
+    }
+    
     super.dispose();
   }
 
@@ -137,6 +149,66 @@ class _ProductListScreenState extends State<ProductListScreen> {
     } catch (e) {
       return price; // Return original if formatting fails
     }
+  }
+
+  /// Update quantity với optimistic updates và debouncing 3 giây
+  void _updateQuantityOptimistic(String cartItemKey, int newQuantity) {
+    // Cancel timer cũ nếu có
+    _debounceTimers[cartItemKey]?.cancel();
+    
+    // Update UI ngay lập tức (optimistic update)
+    setState(() {
+      _localQuantities[cartItemKey] = newQuantity;
+      _pendingUpdates.add(cartItemKey);
+    });
+    
+    // Tạo timer mới với delay 3 giây
+    _debounceTimers[cartItemKey] = Timer(const Duration(seconds: 3), () async {
+      try {
+        // Gọi API sau 3 giây
+        final cartProvider = context.read<CartProvider>();
+        await cartProvider.updateItemQuantity(cartItemKey, newQuantity);
+        
+        // Force notify để đảm bảo UI được update từ server
+        cartProvider.forceNotify();
+        
+        // Clear local state sau khi API thành công
+        if (mounted) {
+          setState(() {
+            _localQuantities.remove(cartItemKey);
+            _pendingUpdates.remove(cartItemKey);
+          });
+        }
+      } catch (e) {
+        // Nếu API fail, giữ local state và hiển thị error
+        if (mounted) {
+          setState(() {
+            _pendingUpdates.remove(cartItemKey);
+          });
+          
+          String errorMessage = 'Lỗi khi cập nhật số lượng';
+          
+          if (e.toString().contains('Network error')) {
+            errorMessage = 'Lỗi kết nối mạng. Vui lòng thử lại.';
+          } else if (e.toString().contains('404')) {
+            errorMessage = 'Sản phẩm không tồn tại trong giỏ hàng.';
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Thử lại',
+                textColor: Colors.white,
+                onPressed: () => _updateQuantityOptimistic(cartItemKey, newQuantity),
+              ),
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _addToCart(int productId, {int quantity = 1}) async {
@@ -245,40 +317,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
       return;
     }
 
-    try {
-      final cartProvider = context.read<CartProvider>();
-      await cartProvider.updateItemQuantity(cartItemKey, newQuantity);
-
-      // Force notify để đảm bảo UI được update
-      cartProvider.forceNotify();
-
-      // Không hiển thị thông báo cho việc cập nhật số lượng để tránh spam
-      // Chỉ hiển thị khi có lỗi
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = 'Lỗi khi cập nhật số lượng';
-
-        // Xử lý các loại lỗi cụ thể
-        if (e.toString().contains('Network error')) {
-          errorMessage = 'Lỗi kết nối mạng. Vui lòng thử lại.';
-        } else if (e.toString().contains('404')) {
-          errorMessage = 'Sản phẩm không tồn tại trong giỏ hàng.';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'Thử lại',
-              textColor: Colors.white,
-              onPressed: () => _updateCartQuantity(cartItemKey, newQuantity),
-            ),
-          ),
-        );
-      }
-    }
+    // Sử dụng optimistic updates với debouncing 3 giây
+    _updateQuantityOptimistic(cartItemKey, newQuantity);
   }
 
   Future<void> _removeFromCart(String cartItemKey) async {
@@ -1135,37 +1175,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: cartProvider.isLoading
-                    ? null
-                    : () => _addToCart(product.id),
+                onPressed: () => _addToCart(product.id),
                 style: FilledButton.styleFrom(
-                  backgroundColor: cartProvider.isLoading
-                      ? Colors.grey
-                      : Colors.blue,
+                  backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: cartProvider.isLoading
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Text(
-                        'Thêm vào giỏ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                child: const Text(
+                  'Thêm vào giỏ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ),
           );
@@ -1175,7 +1200,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
         final cartItem = cartProvider.cart!.items.firstWhere(
           (item) => item.id.toString() == productId,
         );
-        final quantity = cartItem.quantity;
+        
+        // Sử dụng local quantity nếu có (optimistic update), nếu không thì dùng từ cart
+        final quantity = _localQuantities[cartItem.key] ?? cartItem.quantity;
+        final isPending = _pendingUpdates.contains(cartItem.key);
 
         return Container(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), // Giảm top padding
@@ -1189,23 +1217,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: cartProvider.isLoading
-                          ? Colors.grey[300]
-                          : Colors.grey[200],
+                      color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
-                      onPressed: cartProvider.isLoading
-                          ? null
-                          : () =>
-                                _updateCartQuantity(cartItem.key, quantity - 1),
+                      onPressed: () =>
+                            _updateCartQuantity(cartItem.key, quantity - 1),
                       padding: EdgeInsets.zero,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.remove,
                         size: 16,
-                        color: cartProvider.isLoading
-                            ? Colors.grey
-                            : Colors.black87,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
@@ -1215,37 +1237,40 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: cartProvider.isLoading
-                            ? Colors.grey[100]
-                            : Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: cartProvider.isLoading
-                              ? Colors.grey[300]!
-                              : Colors.blue[200]!,
+                                              decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.blue[200]!,
+                          ),
                         ),
-                      ),
-                      child: cartProvider.isLoading
-                          ? const SizedBox(
-                              height: 16,
-                              width: 16,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            quantity.toString(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isPending ? Colors.orange : Colors.blue,
+                            ),
+                          ),
+                          if (isPending) ...[
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              width: 8,
+                              height: 8,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                                strokeWidth: 1,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.blue,
+                                  Colors.orange,
                                 ),
                               ),
-                            )
-                          : Text(
-                              quantity.toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.blue,
-                              ),
                             ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
 
@@ -1254,16 +1279,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: cartProvider.isLoading
-                          ? Colors.grey[400]
-                          : Colors.blue,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
-                      onPressed: cartProvider.isLoading
-                          ? null
-                          : () =>
-                                _updateCartQuantity(cartItem.key, quantity + 1),
+                      onPressed: () =>
+                            _updateCartQuantity(cartItem.key, quantity + 1),
                       padding: EdgeInsets.zero,
                       icon: const Icon(
                         Icons.add,
