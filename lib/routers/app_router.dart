@@ -10,7 +10,7 @@ import 'package:store_manager/screens/product/product_detail.dart';
 import 'package:store_manager/screens/product/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
 import 'package:store_manager/screens/order_list_screen.dart';
-import 'package:store_manager/screens/order_detail_screen.dart';
+import 'package:store_manager/screens/order/order_detail_screen.dart';
 import 'package:store_manager/screens/customer/customer_edit_screen.dart';
 import 'package:store_manager/screens/cart_screen.dart';
 import 'package:store_manager/screens/order/order_checkout_screen.dart';
