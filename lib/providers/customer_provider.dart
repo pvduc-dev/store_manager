@@ -28,6 +28,7 @@ class CustomerProvider extends ChangeNotifier {
       final query = _searchQuery.toLowerCase();
       return customer.fullName.toLowerCase().contains(query) ||
           customer.email.toLowerCase().contains(query) ||
+          customer.nip.toLowerCase().contains(query) ||
           customer.billingCompany.toLowerCase().contains(query) ||
           customer.billingPhone.contains(query);
     }).toList();
@@ -159,25 +160,13 @@ class CustomerProvider extends ChangeNotifier {
     _searchQuery = query;
     
     if (query.isEmpty) {
-      notifyListeners();
+      await loadCustomers(refresh: true);
       return;
     }
 
-    _isLoading = true;
+    // Không gọi API; lọc local theo tên, email, số điện thoại, NIP
+    // Danh sách hiển thị dùng getter filteredCustomers
     notifyListeners();
-
-    try {
-      final response = await CustomerService.searchCustomers(query: query);
-      _customers = response;
-      _customersMap = Map.fromEntries(
-        response.map((customer) => MapEntry(customer.id, customer)),
-      );
-    } catch (e) {
-      print('Error searching customers: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   void clearSearch() {

@@ -47,6 +47,33 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Consumer<CustomerProvider>(
+              builder: (context, customerProvider, child) {
+                return TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Tìm theo tên, số điện thoại, email, NIP',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    suffixIcon: customerProvider.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              customerProvider.searchCustomers('');
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    customerProvider.searchCustomers(value);
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             Expanded(
               child: Consumer<CustomerProvider>(
                 builder: (context, customerProvider, child) {

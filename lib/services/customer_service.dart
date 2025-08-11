@@ -199,7 +199,7 @@ class CustomerService {
         '/customers',
         queryParameters: {
           'per_page': perPage,
-          'orderby': 'date',
+          'orderby': 'registered_date',
           'order': 'desc',
         },
         options: Options(
@@ -235,7 +235,7 @@ class CustomerService {
         queryParameters: {
           'page': page,
           'per_page': perPage,
-          'orderby': 'date',
+          'orderby': 'registered_date',
           'order': 'desc',
         },
         options: Options(
