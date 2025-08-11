@@ -121,8 +121,10 @@ class ProductProvider extends ChangeNotifier {
 
   Future<void> searchProducts(String query) async {
     _searchQuery = query.trim();
+    print('ProductProvider: Starting search with query: "$_searchQuery"');
     
     if (_searchQuery.isEmpty) {
+      print('ProductProvider: Query is empty, loading all products');
       await loadProducts(refresh: true);
       return;
     }
@@ -136,6 +138,7 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('ProductProvider: Calling ProductService.searchProducts');
       final response = await ProductService.searchProducts(
         _searchQuery, 
         page: 1, 
@@ -143,6 +146,9 @@ class ProductProvider extends ChangeNotifier {
         orderby: _sortOption.orderby,
         order: _sortOption.order,
       );
+      
+      print('ProductProvider: Search response received with ${response.length} products');
+      
       _products = response;
       _productsMap = Map.fromEntries(
         response.map((product) => MapEntry(product.id, product)),
@@ -150,13 +156,17 @@ class ProductProvider extends ChangeNotifier {
       _currentPage = 1;
       _hasMoreData = response.length == _perPage;
       _isLoading = false;
+      
+      print('ProductProvider: Search completed. Products: ${_products.length}, HasMore: $_hasMoreData');
       notifyListeners();
     } catch (e) {
-      print('Error searching products: $e');
+      print('ProductProvider: Error searching products: $e');
       _isLoading = false;
       notifyListeners();
     }
   }
+
+
 
   void clearSearch() {
     if (_searchQuery.isNotEmpty) {
@@ -195,7 +205,7 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  removeProduct(String productId) {
+  removeProduct(int productId) {
     _products.removeWhere((product) => product.id == productId);
     _productsMap.remove(productId);
     notifyListeners();

@@ -178,4 +178,51 @@ class OrderProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<void> deleteOrder(int orderId) async {
+    try {
+      final success = await OrderService.deleteOrder(orderId);
+      if (success) {
+        _orders.removeWhere((order) => order.id == orderId);
+        _ordersMap.remove(orderId);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error deleting order: $e');
+      rethrow;
+    }
+  }
+
+  /// Tạo order mới
+  Future<Order?> createOrder(Map<String, dynamic> orderData) async {
+    try {
+      print('OrderProvider: Bắt đầu tạo đơn hàng...');
+      _isLoading = true;
+      notifyListeners();
+
+      print('OrderProvider: Dữ liệu đơn hàng: ${orderData.toString()}');
+      
+      final newOrder = await OrderService.createOrder(orderData: orderData);
+      
+      print('OrderProvider: Đơn hàng được tạo thành công: ${newOrder?.id}');
+      
+      if (newOrder != null) {
+        // Thêm order mới vào danh sách
+        _orders.insert(0, newOrder);
+        _ordersMap[newOrder.id] = newOrder;
+        
+        // Cập nhật UI
+        notifyListeners();
+      }
+      
+      return newOrder;
+    } catch (e) {
+      print('OrderProvider: Lỗi khi tạo đơn hàng: $e');
+      print('OrderProvider: Stack trace: ${StackTrace.current}');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

@@ -113,4 +113,36 @@ class NonceService {
            _nonceExpiry != null && 
            DateTime.now().isBefore(_nonceExpiry!);
   }
+
+  /// Kiểm tra authentication status bằng cách gọi API test
+  static Future<bool> checkAuthentication() async {
+    try {
+      print('NonceService: Kiểm tra authentication status...');
+      final response = await dio.get('/cart');
+      
+      if (response.statusCode == 200) {
+        print('NonceService: Authentication OK');
+        return true;
+      } else {
+        print('NonceService: Authentication failed - Status: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('NonceService: Authentication check failed: $e');
+      return false;
+    }
+  }
+
+  /// Refresh authentication bằng cách lấy nonce mới
+  static Future<bool> refreshAuthentication() async {
+    try {
+      print('NonceService: Refreshing authentication...');
+      clearNonce(); // Xóa cache cũ
+      final newNonce = await getNonce(); // Lấy nonce mới
+      return newNonce.isNotEmpty;
+    } catch (e) {
+      print('NonceService: Failed to refresh authentication: $e');
+      return false;
+    }
+  }
 }

@@ -3,9 +3,33 @@ import 'package:store_manager/models/cart.dart';
 import 'package:store_manager/services/cart_service.dart';
 import 'package:store_manager/services/nonce_service.dart';
 
+
 class CartProvider extends ChangeNotifier {
   Cart? cart;
   bool isLoading = false;
+
+  /// Tạo cart rỗng
+  Cart _createEmptyCart() {
+    return Cart(
+      items: [],
+      coupons: [],
+      fees: [],
+      totals: CartTotals.empty(),
+      shippingAddress: Address.empty(),
+      billingAddress: Address.empty(),
+      needsPayment: false,
+      needsShipping: false,
+      paymentRequirements: [],
+      hasCalculatedShipping: false,
+      shippingRates: [],
+      itemsCount: 0,
+      itemsWeight: 0.0,
+      crossSells: [],
+      errors: [],
+      paymentMethods: [],
+      extensions: {},
+    );
+  }
 
   Future<void> getCart() async {
     try {
@@ -21,7 +45,7 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addItemToCart(String productId, {int quantity = 1}) async {
+  Future<void> addItemToCart(String productId, {int quantity = 1, String? price}) async {
     try {
       isLoading = true;
       notifyListeners();
@@ -31,7 +55,7 @@ class CartProvider extends ChangeNotifier {
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
       // API đã trả về Cart object mới, không cần gọi getCart() thêm
-      final newCart = await CartService.addItem(productId, nonce, quantity: quantity);
+      final newCart = await CartService.addItem(productId, nonce, quantity: quantity, price: price);
       
       cart = newCart;
     } catch (e) {
@@ -146,10 +170,34 @@ class CartProvider extends ChangeNotifier {
       
       // Lấy nonce header từ service
       final nonce = await NonceService.getNonce();
+      print('API: Got nonce for clear cart: ${nonce.substring(0, 8)}...');
+      
       // API đã trả về Cart object mới, không cần gọi getCart() thêm
       cart = await CartService.clearCart(nonce);
+      print('API: Clear cart thành công');
     } catch (e) {
-      rethrow; // Rethrow để UI có thể handle error
+      print('API: Lỗi khi clear cart: $e');
+      
+      // Nếu là lỗi type casting, tạo cart rỗng
+      if (e.toString().contains('type') && e.toString().contains('subtype')) {
+        print('API: Lỗi type casting, tạo cart rỗng');
+        cart = _createEmptyCart();
+        print('API: Đã tạo cart rỗng thay thế');
+      }
+      // Nếu là lỗi authentication, thử refresh cart thay vì clear
+      else if (e.toString().contains('401') || e.toString().contains('Authentication failed')) {
+        print('API: Lỗi 401, thử refresh cart thay vì clear');
+        try {
+          cart = await CartService.getCart();
+          print('API: Refresh cart thành công sau lỗi 401');
+        } catch (refreshError) {
+          print('API: Lỗi khi refresh cart: $refreshError');
+          // Không rethrow vì đơn hàng đã tạo thành công
+        }
+      } else {
+        // Với các lỗi khác, vẫn rethrow để UI có thể handle
+        rethrow;
+      }
     } finally {
       isLoading = false;
       notifyListeners();
@@ -185,7 +233,10 @@ class CartProvider extends ChangeNotifier {
   
   /// Lấy tổng giá trị cart
   String get totalPrice {
-    return cart?.totals.totalPrice ?? '0';
+    final rawPrice = cart?.totals.totalPrice ?? '0';
+    // Chuyển đổi từ cents sang złoty
+    final cents = int.tryParse(rawPrice) ?? 0;
+    return '${(cents / 100.0).toStringAsFixed(2)} zł';
   }
   
   /// Kiểm tra cart có trống hay không

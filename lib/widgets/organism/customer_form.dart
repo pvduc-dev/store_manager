@@ -38,7 +38,7 @@ class _CustomerFormState extends State<CustomerForm> {
       text: widget.customer?.billingPhone ?? '',
     );
     _addressController = TextEditingController(
-      text: widget.customer?.billingAddress ?? '',
+      text: widget.customer?.billingAddress.fullAddress ?? '',
     );
     _taxCodeController = TextEditingController(
       text: widget.customer?.billing.company ?? '',

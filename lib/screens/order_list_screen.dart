@@ -11,20 +11,44 @@ class OrderListScreen extends StatefulWidget {
   State<OrderListScreen> createState() => _OrderListScreenState();
 }
 
-class _OrderListScreenState extends State<OrderListScreen> {
+class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Load orders khi màn hình được khởi tạo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialOrders();
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh orders khi app trở lại foreground
+    if (state == AppLifecycleState.resumed) {
+      _loadInitialOrders();
+    }
+  }
+
+  void _loadInitialOrders() {
+    if (mounted) {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      orderProvider.loadOrders(refresh: true);
+    }
   }
 
   void _onScroll() {

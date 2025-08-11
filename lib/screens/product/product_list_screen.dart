@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/models/product.dart';
 import 'package:store_manager/providers/product_provider.dart';
@@ -23,20 +22,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
   bool _isShoppingMode = false;
   Set<int> _selectedProductIds = <int>{};
 
-  // NumberFormat cho việc format số tiền
-  final NumberFormat _numberFormat = NumberFormat('#,##0', 'vi_VN');
-  
   // Local state management cho optimistic updates
-  final Map<String, int> _localQuantities = {}; // Quantity hiển thị trên UI
-  final Map<String, Timer?> _debounceTimers = {}; // Timer cho mỗi item
-  final Set<String> _pendingUpdates = {}; // Track items đang chờ API call
+  final Map<String, int> _localQuantities = {};
+  final Map<String, Timer?> _debounceTimers = {};
+  final Set<String> _pendingUpdates = {};
+  final Set<int> _addingToCartProducts = {};
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
-    // Load cart when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CartProvider>().getCart();
     });
@@ -53,12 +49,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
-    
-    // Cleanup timers
+
     for (var timer in _debounceTimers.values) {
       timer?.cancel();
     }
-    
+
     super.dispose();
   }
 
@@ -114,7 +109,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
       if (!_isSelectionMode) {
         _selectedProductIds.clear();
       }
-      // Exit shopping mode when entering selection mode
       if (_isSelectionMode) {
         _isShoppingMode = false;
       }
@@ -124,55 +118,33 @@ class _ProductListScreenState extends State<ProductListScreen> {
   void _toggleShoppingMode() {
     setState(() {
       _isShoppingMode = !_isShoppingMode;
-      // Exit selection mode when entering shopping mode
       if (_isShoppingMode) {
         _isSelectionMode = false;
         _selectedProductIds.clear();
       }
     });
 
-    // Load cart data when entering shopping mode
     if (_isShoppingMode) {
       context.read<CartProvider>().getCart();
     }
   }
 
-
-
-  /// Format số tiền với dấu phẩy ngăn cách
-  String _formatPrice(String price) {
-    try {
-      // Remove currency suffix and parse
-      final cleanPrice = price.replaceAll(RegExp(r'[^\d.]'), '');
-      final numericPrice = double.tryParse(cleanPrice) ?? 0;
-      return _numberFormat.format(numericPrice);
-    } catch (e) {
-      return price; // Return original if formatting fails
-    }
-  }
-
   /// Update quantity với optimistic updates và debouncing 3 giây
   void _updateQuantityOptimistic(String cartItemKey, int newQuantity) {
-    // Cancel timer cũ nếu có
     _debounceTimers[cartItemKey]?.cancel();
-    
-    // Update UI ngay lập tức (optimistic update)
+
     setState(() {
       _localQuantities[cartItemKey] = newQuantity;
       _pendingUpdates.add(cartItemKey);
     });
-    
-    // Tạo timer mới với delay 3 giây
+
     _debounceTimers[cartItemKey] = Timer(const Duration(seconds: 3), () async {
       try {
-        // Gọi API sau 3 giây
         final cartProvider = context.read<CartProvider>();
         await cartProvider.updateItemQuantity(cartItemKey, newQuantity);
-        
-        // Force notify để đảm bảo UI được update từ server
+
         cartProvider.forceNotify();
-        
-        // Clear local state sau khi API thành công
+
         if (mounted) {
           setState(() {
             _localQuantities.remove(cartItemKey);
@@ -180,20 +152,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
           });
         }
       } catch (e) {
-        // Nếu API fail, giữ local state và hiển thị error
         if (mounted) {
           setState(() {
             _pendingUpdates.remove(cartItemKey);
           });
-          
+
           String errorMessage = 'Lỗi khi cập nhật số lượng';
-          
+
           if (e.toString().contains('Network error')) {
             errorMessage = 'Lỗi kết nối mạng. Vui lòng thử lại.';
           } else if (e.toString().contains('404')) {
             errorMessage = 'Sản phẩm không tồn tại trong giỏ hàng.';
           }
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorMessage),
@@ -202,7 +173,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
               action: SnackBarAction(
                 label: 'Thử lại',
                 textColor: Colors.white,
-                onPressed: () => _updateQuantityOptimistic(cartItemKey, newQuantity),
+                onPressed: () =>
+                    _updateQuantityOptimistic(cartItemKey, newQuantity),
               ),
             ),
           );
@@ -214,7 +186,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Future<void> _addToCart(int productId, {int quantity = 1}) async {
     final cartProvider = context.read<CartProvider>();
 
-    // Kiểm tra xem sản phẩm đã có trong giỏ chưa
     if (cartProvider.isProductInCart(productId.toString())) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,40 +199,35 @@ class _ProductListScreenState extends State<ProductListScreen> {
       return;
     }
 
+    setState(() {
+      _addingToCartProducts.add(productId);
+    });
+
     try {
+      final productProvider = context.read<ProductProvider>();
+      final product = productProvider.products.firstWhere(
+        (p) => p.id == productId,
+        orElse: () => throw Exception('Sản phẩm không tồn tại'),
+      );
+
+      final customPrice =
+          product.metaData
+              .where((element) => element.key == 'custom_price')
+              .firstOrNull
+              ?.value ??
+          '0';
+
       await cartProvider.addItemToCart(
         productId.toString(),
         quantity: quantity,
+        price: customPrice,
       );
 
-      // Force notify để đảm bảo UI được update
       cartProvider.forceNotify();
-
-      // Không hiển thị thông báo thành công để tránh spam UI
-      // if (mounted) {
-      //   print('ProductListScreen: Add to cart successful, showing snackbar');
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(
-      //       content: Text(
-      //         'Đã thêm ${quantity > 1 ? '$quantity sản phẩm' : 'sản phẩm'} vào giỏ hàng',
-      //       ),
-      //       backgroundColor: Colors.green,
-      //       duration: const Duration(seconds: 2),
-      //       action: SnackBarAction(
-      //         label: 'Xem giỏ hàng',
-      //         textColor: Colors.white,
-      //         onPressed: () => context.push('/cart'),
-      //       ),
-      //     ),
-      //   );
-      // }
-
-
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Lỗi khi thêm sản phẩm';
 
-        // Xử lý các loại lỗi cụ thể
         if (e.toString().contains('Network error')) {
           errorMessage = 'Lỗi kết nối mạng. Vui lòng thử lại.';
         } else if (e.toString().contains('401') ||
@@ -286,12 +252,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _addingToCartProducts.remove(productId);
+        });
+      }
     }
   }
 
   Future<void> _updateCartQuantity(String cartItemKey, int newQuantity) async {
     if (newQuantity <= 0) {
-      // Khi quantity = 0, xóa sản phẩm khỏi giỏ hàng
       try {
         await context.read<CartProvider>().removeItem(cartItemKey);
         if (mounted) {
@@ -317,7 +288,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
       return;
     }
 
-    // Sử dụng optimistic updates với debouncing 3 giây
     _updateQuantityOptimistic(cartItemKey, newQuantity);
   }
 
@@ -337,7 +307,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
       if (mounted) {
         String errorMessage = 'Lỗi khi xóa sản phẩm';
 
-        // Xử lý các loại lỗi cụ thể
         if (e.toString().contains('Network error')) {
           errorMessage = 'Lỗi kết nối mạng. Vui lòng thử lại.';
         } else if (e.toString().contains('404')) {
@@ -361,7 +330,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Future<void> _clearCart() async {
-    // Hiển thị dialog xác nhận
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -594,7 +562,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               style: const TextStyle(fontSize: 16),
               onSubmitted: (_) => _performSearch(),
               decoration: InputDecoration(
-                hintText: 'Tìm kiếm các sản phẩm',
+                hintText: 'Tìm kiếm theo tên sản phẩm',
                 hintStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
                 border: InputBorder.none,
                 suffixIcon: Consumer<ProductProvider>(
@@ -624,22 +592,71 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          if (!_isSelectionMode && !_isShoppingMode) ...[
-            _buildSortButton(),
-            const Spacer(),
-            const SizedBox(width: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            if (!_isSelectionMode && !_isShoppingMode) ...[
+              _buildSortButton(),
+              const SizedBox(width: 12),
+              _buildSearchTypeIndicator(),
+            ],
+            if (!_isShoppingMode) ...[
+              if (!_isSelectionMode && !_isShoppingMode)
+                const SizedBox(width: 12),
+              _buildSelectionToggle(),
+            ],
+            if (!_isSelectionMode) ...[
+              if (!_isShoppingMode) const SizedBox(width: 12),
+              _buildShoppingToggle(),
+            ],
           ],
-          if (_isSelectionMode || _isShoppingMode) const Spacer(),
-          if (!_isShoppingMode) _buildSelectionToggle(),
-          if (!_isSelectionMode) ...[
-            if (!_isShoppingMode) const SizedBox(width: 12),
-            _buildShoppingToggle(),
-          ],
-          const SizedBox(width: 12),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildSearchTypeIndicator() {
+    return Consumer<ProductProvider>(
+      builder: (context, productProvider, child) {
+        if (!productProvider.isSearching) {
+          return const SizedBox.shrink();
+        }
+
+        final query = productProvider.searchQuery;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue[200]!, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search, size: 14, color: Colors.blue[600]),
+              const SizedBox(width: 4),
+              Text(
+                'Tìm: $query',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () {
+                  _searchController.clear();
+                  productProvider.clearSearch();
+                },
+                child: Icon(Icons.close, size: 14, color: Colors.blue[600]),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -867,7 +884,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           child: Row(
             children: [
-              // Cart info
               const Icon(Icons.shopping_cart, color: Colors.blue, size: 20),
               const SizedBox(width: 8),
               Text(
@@ -880,14 +896,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ),
               const SizedBox(width: 12),
 
-              // Total price
               Text(
                 'Tổng cộng',
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
               const SizedBox(width: 4),
               Text(
-                '${_formatPrice(totalPrice)} zł',
+                totalPrice,
                 style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -897,9 +912,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
               const Spacer(),
 
-              // Action buttons
               if (itemCount > 0) ...[
-                // View cart button
                 FilledButton(
                   onPressed: cartProvider.isLoading
                       ? null
@@ -945,39 +958,46 @@ class _ProductListScreenState extends State<ProductListScreen> {
           return _buildEmptyState(productProvider);
         }
 
-        return RefreshIndicator(
-          onRefresh: _refreshProducts,
-          child: MasonryGridView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverSimpleGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-            ),
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            itemCount:
-                productProvider.products.length +
-                (productProvider.hasMoreData ? 2 : 0),
-            itemBuilder: (context, index) {
-              if (index >= productProvider.products.length) {
-                if (index == productProvider.products.length) {
-                  return productProvider.isLoadingMore
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      : const SizedBox.shrink();
-                } else {
-                  return const SizedBox.shrink();
-                }
-              }
+        return Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refreshProducts,
+                child: MasonryGridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate:
+                      const SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                      ),
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  itemCount:
+                      productProvider.products.length +
+                      (productProvider.hasMoreData ? 2 : 0),
+                  itemBuilder: (context, index) {
+                    if (index >= productProvider.products.length) {
+                      if (index == productProvider.products.length) {
+                        return productProvider.isLoadingMore
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 32),
+                                child: Align(
+                                  alignment: Alignment.center,
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : const SizedBox.shrink();
+                      } else {
+                        return const SizedBox.shrink();
+                      }
+                    }
 
-              return _buildProductCard(productProvider.products[index]);
-            },
-          ),
+                    return _buildProductCard(productProvider.products[index]);
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -998,15 +1018,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
           const SizedBox(height: 16),
           Text(
             productProvider.isSearching
-                ? 'Không tìm thấy sản phẩm nào'
+                ? 'Không tìm thấy sản phẩm nào với từ khóa: "${productProvider.searchQuery}"'
                 : 'Chưa có sản phẩm nào',
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
           if (productProvider.isSearching) ...[
             const SizedBox(height: 8),
             Text(
-              'Thử tìm kiếm với từ khóa khác',
+              'Thử tìm kiếm với từ khóa khác hoặc xóa từ khóa để xem tất cả sản phẩm',
               style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                _searchController.clear();
+                productProvider.clearSearch();
+              },
+              child: const Text('Xem tất cả sản phẩm'),
             ),
           ],
           const SizedBox(height: 8),
@@ -1066,7 +1096,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   Widget _buildProductImage(Product product) {
     return Container(
-      height: _isShoppingMode ? 100 : 120, // Giảm height khi shopping mode
+      height: _isShoppingMode ? 100 : 120,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         color: Colors.grey[200],
@@ -1101,30 +1131,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
         '';
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        _isShoppingMode ? 8.0 : 12.0,  // left
-        _isShoppingMode ? 8.0 : 12.0,  // top
-        _isShoppingMode ? 8.0 : 12.0,  // right
-        _isShoppingMode ? 4.0 : 8.0,   // bottom - giảm để gần với shopping controls
-      ),
+      padding: EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            product.name,
-            style: TextStyle(
-              fontSize: _isShoppingMode ? 13 : 14, 
-              fontWeight: FontWeight.w600,
+          Container(
+            constraints: BoxConstraints(minHeight: 40),
+            child: Text(
+              '[${product.id}] ${product.name}',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              maxLines: 2,
+
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: _isShoppingMode ? 2 : 3,
-            overflow: TextOverflow.ellipsis,
           ),
 
-          SizedBox(height: _isShoppingMode ? 6 : 8),
+          SizedBox(height: 6),
 
           Text(
-            '${_formatPrice(customPrice)} zł',
+            '${customPrice} zł',
             style: TextStyle(
               fontSize: _isShoppingMode ? 14 : 16,
               color: Colors.red,
@@ -1170,12 +1196,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
         final isInCart = cartProvider.isProductInCart(productId);
 
         if (!isInCart) {
+          final isAdding = _addingToCartProducts.contains(product.id);
+
           return Container(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), // Giảm top padding
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () => _addToCart(product.id),
+                onPressed: isAdding ? null : () => _addToCart(product.id),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -1184,35 +1212,55 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text(
-                  'Thêm vào giỏ',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
+                child: isAdding
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Đang thêm...',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Text(
+                        'Thêm vào giỏ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
           );
         }
 
-        // Product is in cart, show quantity controls
         final cartItem = cartProvider.cart!.items.firstWhere(
           (item) => item.id.toString() == productId,
         );
-        
-        // Sử dụng local quantity nếu có (optimistic update), nếu không thì dùng từ cart
+
         final quantity = _localQuantities[cartItem.key] ?? cartItem.quantity;
         final isPending = _pendingUpdates.contains(cartItem.key);
 
         return Container(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), // Giảm top padding
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
           child: Column(
             children: [
-              // Quantity controls row
               Row(
                 children: [
-                  // Decrease button
                   Container(
                     width: 32,
                     height: 32,
@@ -1222,7 +1270,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ),
                     child: IconButton(
                       onPressed: () =>
-                            _updateCartQuantity(cartItem.key, quantity - 1),
+                          _updateCartQuantity(cartItem.key, quantity - 1),
                       padding: EdgeInsets.zero,
                       icon: const Icon(
                         Icons.remove,
@@ -1232,18 +1280,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ),
                   ),
 
-                  // Quantity display
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                                              decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.blue[200]!,
-                          ),
-                        ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -1274,7 +1319,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ),
                   ),
 
-                  // Increase button
                   Container(
                     width: 32,
                     height: 32,
@@ -1284,7 +1328,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ),
                     child: IconButton(
                       onPressed: () =>
-                            _updateCartQuantity(cartItem.key, quantity + 1),
+                          _updateCartQuantity(cartItem.key, quantity + 1),
                       padding: EdgeInsets.zero,
                       icon: const Icon(
                         Icons.add,
@@ -1296,10 +1340,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ],
               ),
 
-              // Item total price
               const SizedBox(height: 4),
               Text(
-                'Tổng: ${_formatPrice(cartItem.totals.lineTotal)} ${cartItem.totals.currencySuffix}',
+                'Tổng: ${((int.tryParse(cartItem.totals.lineTotal) ?? 0) / 100.0).toStringAsFixed(2)} zł',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],

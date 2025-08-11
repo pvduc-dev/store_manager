@@ -213,7 +213,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           ListTile(
                             leading: const Icon(Icons.location_on),
                             title: const Text('Địa chỉ'),
-                            subtitle: Text(customer.billingAddress),
+                            subtitle: Text(customer.billingAddress.fullAddress),
                           ),
                         ListTile(
                           leading: const Icon(Icons.calendar_today),

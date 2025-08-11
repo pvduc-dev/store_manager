@@ -2,6 +2,7 @@ class Product {
   final int id;
   final String name;
   final String description;
+  final String? sku;
   final List<MetaData> metaData;
   final List<ProductImage> images;
 
@@ -9,6 +10,7 @@ class Product {
     required this.id,
     required this.name,
     required this.description,
+    this.sku,
     required this.metaData,
     required this.images,
   });
@@ -17,6 +19,7 @@ class Product {
     int? id,
     String? name,
     String? description,
+    String? sku,
     List<MetaData>? metaData,
     List<ProductImage>? images,
   }) {
@@ -24,6 +27,7 @@ class Product {
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      sku: sku ?? this.sku,
       metaData: metaData ?? this.metaData,
       images: images ?? this.images,
     );
@@ -34,6 +38,7 @@ class Product {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       description: json['description'] ?? '',
+      sku: json['sku'],
       metaData:
           (json['meta_data'] as List?)
               ?.map((meta) => MetaData.fromJson(meta as Map<String, dynamic>))
@@ -52,9 +57,22 @@ class Product {
       'id': id,
       'name': name,
       'description': description,
+      'sku': sku,
       'meta_data': metaData.map((meta) => meta.toJson()).toList(),
       'images': images.map((image) => image.toJson()).toList(),
     };
+  }
+
+  /// Lấy SKU từ metaData nếu không có trường SKU trực tiếp
+  String? get skuFromMeta {
+    if (sku != null && sku!.isNotEmpty) return sku;
+    
+    final skuMeta = metaData.firstWhere(
+      (meta) => meta.key.toLowerCase() == 'sku',
+      orElse: () => MetaData(key: '', value: ''),
+    );
+    
+    return skuMeta.value.isNotEmpty ? skuMeta.value : null;
   }
 }
 

@@ -61,6 +61,8 @@ class ProductService {
     }
   }
 
+
+
   static Future<int?> uploadImage(File imageFile) async {
     try {
       final imageBytes = await imageFile.readAsBytes();
@@ -162,6 +164,26 @@ class ProductService {
       }
     } catch (e) {
       print('Exception while deleting product: $e');
+      return null;
+    }
+  }
+
+  /// Lấy sản phẩm theo ID
+  static Future<Product?> getProductById(int id) async {
+    try {
+      final response = await Dio().get(
+        '$baseUrl/products/$id',
+        options: Options(headers: {'Authorization': basicAuth}),
+      );
+
+      if (response.statusCode == 200) {
+        return Product.fromJson(response.data);
+      } else {
+        print('Error fetching product by ID: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception while fetching product by ID: $e');
       return null;
     }
   }

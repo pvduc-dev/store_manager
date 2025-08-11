@@ -60,4 +60,94 @@ class OrderService {
       return null;
     }
   }
+
+  /// Tạo order mới từ cart và thông tin khách hàng
+  static Future<Order?> createOrder({
+    required Map<String, dynamic> orderData,
+  }) async {
+    int retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        print('OrderService: Lần thử ${retryCount + 1}/$maxRetries - Bắt đầu gọi API tạo đơn hàng...');
+        print('OrderService: URL: $baseUrl/orders');
+        print('OrderService: Headers: Authorization: $basicAuth');
+        
+        final response = await Dio().post(
+          '$baseUrl/orders',
+          data: orderData,
+          options: Options(
+            headers: {'Authorization': basicAuth},
+            sendTimeout: const Duration(seconds: 60),
+            receiveTimeout: const Duration(seconds: 60),
+            validateStatus: (status) {
+              return status != null && status < 500;
+            },
+          ),
+        );
+        
+        print('OrderService: Response status: ${response.statusCode}');
+        
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          print('OrderService: Tạo đơn hàng thành công!');
+          print('OrderService: Response data: ${response.data}');
+          return Order.fromJson(response.data as Map<String, dynamic>);
+        } else {
+          print('OrderService: Lỗi HTTP ${response.statusCode}: ${response.data}');
+          throw Exception('HTTP ${response.statusCode}: ${response.data}');
+        }
+        
+      } catch (e) {
+        retryCount++;
+        print('OrderService: Lần thử $retryCount/$maxRetries - Lỗi: $e');
+        
+        if (e is DioException) {
+          print('OrderService: DioException type: ${e.type}');
+          print('OrderService: DioException message: ${e.message}');
+          
+          if (e.response != null) {
+            print('OrderService: Response status: ${e.response?.statusCode}');
+            print('OrderService: Response data: ${e.response?.data}');
+            print('OrderService: Response headers: ${e.response?.headers}');
+          }
+          
+          // Nếu là lỗi timeout hoặc connection, thử lại
+          if (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.sendTimeout ||
+              e.type == DioExceptionType.connectionError) {
+            
+            if (retryCount < maxRetries) {
+              print('OrderService: Đợi 2 giây trước khi thử lại...');
+              await Future.delayed(const Duration(seconds: 2));
+              continue;
+            }
+          }
+        }
+        
+        // Nếu đã thử hết số lần hoặc lỗi không phải timeout
+        if (retryCount >= maxRetries) {
+          print('OrderService: Đã thử hết $maxRetries lần, dừng thử lại');
+          rethrow;
+        }
+      }
+    }
+    
+    throw Exception('Không thể tạo đơn hàng sau $maxRetries lần thử');
+  }
+
+  /// Xóa order theo ID
+  static Future<bool> deleteOrder(int orderId) async {
+    try {
+      await Dio().delete(
+        '$baseUrl/orders/$orderId',
+        options: Options(headers: {'Authorization': basicAuth})
+      );
+      return true;
+    } catch (e) {
+      print('Error deleting order $orderId: $e');
+      return false;
+    }
+  }
 }

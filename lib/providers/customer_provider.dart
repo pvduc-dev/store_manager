@@ -167,7 +167,7 @@ class CustomerProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await CustomerService.searchCustomers(query);
+      final response = await CustomerService.searchCustomers(query: query);
       _customers = response;
       _customersMap = Map.fromEntries(
         response.map((customer) => MapEntry(customer.id, customer)),
