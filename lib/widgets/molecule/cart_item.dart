@@ -1,44 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:store_manager/models/cart.dart';
+import 'dart:math' as math;
 
 class CartItemWidget extends StatefulWidget {
   final CartItem cartItem;
+  final VoidCallback? onRemove;
   final VoidCallback? onIncrease;
   final VoidCallback? onDecrease;
-  final VoidCallback? onRemove;
-  final Function(String)? onPriceEdit;
   final Function(int)? onQuantityChanged;
-  
+
   const CartItemWidget({
-    super.key, 
+    Key? key,
     required this.cartItem,
+    this.onRemove,
     this.onIncrease,
     this.onDecrease,
-    this.onRemove,
-    this.onPriceEdit,
     this.onQuantityChanged,
-  });
+  }) : super(key: key);
 
   @override
   State<CartItemWidget> createState() => _CartItemWidgetState();
 }
 
 class _CartItemWidgetState extends State<CartItemWidget> {
-  late TextEditingController _priceController;
   late TextEditingController _quantityController;
+  late TextEditingController _priceController;
 
   @override
   void initState() {
     super.initState();
-    _priceController = TextEditingController(text: widget.cartItem.prices.price);
-    _quantityController = TextEditingController(text: widget.cartItem.quantity.toString());
+    _quantityController = TextEditingController(
+      text: widget.cartItem.quantity.toString(),
+    );
+    _priceController = TextEditingController(
+      text: _formatUnitPriceForDisplay(
+        widget.cartItem.totals.lineTotal,
+        widget.cartItem.quantity,
+        widget.cartItem.totals.currencyMinorUnit,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _priceController.dispose();
     _quantityController.dispose();
+    _priceController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CartItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Cập nhật text khi widget thay đổi
+    if (oldWidget.cartItem.totals.lineTotal != widget.cartItem.totals.lineTotal ||
+        oldWidget.cartItem.quantity != widget.cartItem.quantity) {
+      _priceController.text = _formatUnitPriceForDisplay(
+        widget.cartItem.totals.lineTotal,
+        widget.cartItem.quantity,
+        widget.cartItem.totals.currencyMinorUnit,
+      );
+    }
+    if (oldWidget.cartItem.quantity != widget.cartItem.quantity) {
+      _quantityController.text = widget.cartItem.quantity.toString();
+    }
+  }
+
+  String _formatPriceForDisplay(String priceInMinorUnits, int currencyMinorUnit) {
+    final int priceInCents = int.tryParse(priceInMinorUnits) ?? 0;
+    final double priceInUnits = priceInCents / math.pow(10, currencyMinorUnit);
+    return priceInUnits.toStringAsFixed(2);
+  }
+
+  /// Format giá đơn vị (giá của 1 sản phẩm)
+  String _formatUnitPriceForDisplay(String lineTotal, int quantity, int currencyMinorUnit) {
+    final int totalInCents = int.tryParse(lineTotal) ?? 0;
+    final int unitPriceInCents = quantity > 0 ? totalInCents ~/ quantity : 0;
+    final double unitPriceInUnits = unitPriceInCents / math.pow(10, currencyMinorUnit);
+    return unitPriceInUnits.toStringAsFixed(2);
   }
 
   @override
@@ -99,12 +137,14 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                   ],
                   SizedBox(height: 8),
                   
-                  // TextField giá
+                  // TextField giá (chỉ đọc, không thể chỉnh sửa)
                   Container(
                     width: 100,
                     child: TextField(
                       controller: _priceController,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      readOnly: true, // Chỉ đọc, không thể chỉnh sửa
+                      enableInteractiveSelection: false, // Tắt khả năng chọn text
+                      showCursor: false, // Ẩn con trỏ
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -119,18 +159,10 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         isDense: true,
                         hintText: 'Giá',
+                        suffixText: widget.cartItem.totals.currencySymbol,
+                        filled: true,
+                        fillColor: Colors.grey[100], // Màu nền để thể hiện readonly
                       ),
-                      onSubmitted: (value) {
-                        if (widget.onPriceEdit != null) {
-                          widget.onPriceEdit!(value);
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Đã thay đổi giá: $value')),
-                        );
-                      },
-                      onChanged: (value) {
-                        // Có thể thêm validation real-time nếu cần
-                      },
                     ),
                   ),
                   
@@ -191,9 +223,7 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                                   if (widget.onQuantityChanged != null) {
                                     widget.onQuantityChanged!(newQty);
                                   }
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Đã thay đổi số lượng: $newQty')),
-                                  );
+                                  // Không hiển thị toast ở đây nữa, để CartScreen handle việc hiển thị toast sau khi API thành công
                                 } else {
                                   // Reset to original value if invalid
                                   _quantityController.text = widget.cartItem.quantity.toString();
@@ -240,7 +270,11 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                       
                       // Nút xóa
                       InkWell(
-                        onTap: widget.onRemove,
+                        onTap: () {
+                          if (widget.onRemove != null) {
+                            widget.onRemove!();
+                          }
+                        },
                         child: Container(
                           padding: EdgeInsets.all(8),
                           child: Icon(

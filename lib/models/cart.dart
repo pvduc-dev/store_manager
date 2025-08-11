@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Cart {
   final List<CartItem> items;
   final List<dynamic> coupons;

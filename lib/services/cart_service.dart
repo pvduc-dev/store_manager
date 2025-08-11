@@ -31,6 +31,7 @@ class CartService {
       );
 
       if (response.statusCode == 200) {
+        print('Cart: ${Cart.fromJson(response.data)}');
         return Cart.fromJson(response.data);
       } else {
         throw Exception('Failed to load cart: ${response.statusCode}');
@@ -111,7 +112,6 @@ class CartService {
       }
 
 
-
       final response = await dio.put(
         '/cart/items/$cartItemKey',
         data: {'quantity': quantity},
@@ -174,6 +174,9 @@ class CartService {
 
   static Future<Cart> removeItem(String cartItemKey, String nonceHeader) async {
     try {
+      print('CartService: Bắt đầu remove item với key: $cartItemKey');
+      print('CartService: Nonce header: ${nonceHeader.isNotEmpty ? nonceHeader.substring(0, 8) + '...' : 'EMPTY'}');
+      
       final headers = <String, String>{
         'Authorization': basicAuth,
         'Content-Type': 'application/json',
@@ -181,25 +184,210 @@ class CartService {
       
       if (nonceHeader.isNotEmpty) {
         headers['X-WC-Store-API-Nonce'] = nonceHeader;
-      }
-
-      final response = await dio.delete(
-        '/cart/items/$cartItemKey',
-        options: Options(headers: headers),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return Cart.fromJson(response.data);
+        headers['X-WC-Store-API-Nonce'] = nonceHeader;
+        headers['Nonce'] = nonceHeader;
+        headers['X-WP-Nonce'] = nonceHeader; // WordPress nonce
+        print('CartService: Đã thêm tất cả nonce headers');
       } else {
-        throw Exception('Failed to remove item from cart: ${response.statusCode}');
+        print('CartService: Không có nonce, sẽ thử gọi API không cần nonce');
       }
+
+      // Thử endpoint đầu tiên: /cart/remove-item
+      try {
+        print('CartService: Thử endpoint /cart/remove-item...');
+        final response = await dio.post(
+          '/cart/remove-item',
+          data: {'key': cartItemKey},
+          options: Options(
+            headers: headers,
+            validateStatus: (status) => status != null && status < 500, // Không throw cho 401
+          ),
+        );
+
+        print('CartService: Response status: ${response.statusCode}');
+        print('CartService: Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với endpoint /cart/remove-item');
+          return Cart.fromJson(response.data);
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với endpoint /cart/remove-item');
+        }
+      } catch (e) {
+        print('CartService: Endpoint /cart/remove-item thất bại: $e');
+      }
+
+      // Thử endpoint thứ hai: /cart/items/{key} với DELETE
+      try {
+        print('CartService: Thử endpoint DELETE /cart/items/$cartItemKey...');
+        final response = await dio.delete(
+          '/cart/items/$cartItemKey',
+          options: Options(
+            headers: headers,
+            validateStatus: (status) => status != null && status < 500, // Không throw cho 401
+          ),
+        );
+
+        print('CartService: Response status: ${response.statusCode}');
+        print('CartService: Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với endpoint DELETE /cart/items/$cartItemKey');
+          return Cart.fromJson(response.data);
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với endpoint DELETE /cart/items/$cartItemKey');
+        }
+      } catch (e) {
+        print('CartService: Endpoint DELETE /cart/items/$cartItemKey thất bại: $e');
+      }
+
+      // Thử endpoint thứ ba: /cart/items/{key} với POST và data
+      try {
+        print('CartService: Thử endpoint POST /cart/items/$cartItemKey với data...');
+        final response = await dio.post(
+          '/cart/items/$cartItemKey',
+          data: {'quantity': 0}, // Set quantity = 0 để remove
+          options: Options(
+            headers: headers,
+            validateStatus: (status) => status != null && status < 500, // Không throw cho 401
+          ),
+        );
+
+        print('CartService: Response status: ${response.statusCode}');
+        print('CartService: Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với endpoint POST /cart/items/$cartItemKey');
+          return Cart.fromJson(response.data);
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với endpoint POST /cart/items/$cartItemKey');
+        }
+      } catch (e) {
+        print('CartService: Endpoint POST /cart/items/$cartItemKey thất bại: $e');
+      }
+
+      // Thử endpoint thứ tư: /cart/items/{key} với PUT và quantity = 0
+      try {
+        print('CartService: Thử endpoint PUT /cart/items/$cartItemKey với quantity = 0...');
+        final response = await dio.put(
+          '/cart/items/$cartItemKey',
+          data: {'quantity': 0}, // Set quantity = 0 để remove
+          options: Options(
+            headers: headers,
+            validateStatus: (status) => status != null && status < 500, // Không throw cho 401
+          ),
+        );
+
+        print('CartService: Response status: ${response.statusCode}');
+        print('CartService: Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với endpoint PUT /cart/items/$cartItemKey');
+          return Cart.fromJson(response.data);
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với endpoint PUT /cart/items/$cartItemKey');
+        }
+      } catch (e) {
+        print('CartService: Endpoint PUT /cart/items/$cartItemKey thất bại: $e');
+      }
+
+      // Thử endpoint thứ năm: Sử dụng REST API v3 để xóa cart item
+      try {
+        print('CartService: Thử endpoint REST API v3 /wc/v3/cart/items/$cartItemKey...');
+        
+        // Tạo Dio instance mới cho REST API v3
+        final restDio = Dio(
+          BaseOptions(
+            baseUrl: 'https://kochamtoys.pl/wp-json/wc/v3',
+            headers: {
+              'Authorization': basicAuth,
+              'Content-Type': 'application/json',
+            },
+          ),
+        );
+        
+        final response = await restDio.delete(
+          '/cart/items/$cartItemKey',
+          options: Options(
+            validateStatus: (status) => status != null && status < 500,
+          ),
+        );
+
+        print('CartService: REST API v3 Response status: ${response.statusCode}');
+        print('CartService: REST API v3 Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với REST API v3');
+          // Sau khi xóa thành công, refresh cart từ Store API
+          return await getCart();
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với REST API v3');
+        }
+      } catch (e) {
+        print('CartService: REST API v3 endpoint thất bại: $e');
+      }
+
+      // Thử endpoint thứ sáu: Sử dụng /cart/items với method POST để xóa item
+      try {
+        print('CartService: Thử endpoint POST /cart/items với data xóa...');
+        
+        final response = await dio.post(
+          '/cart/items',
+          data: {
+            'key': cartItemKey,
+            'quantity': 0,
+            'remove': true, // Thêm flag remove
+          },
+          options: Options(
+            headers: headers,
+            validateStatus: (status) => status != null && status < 500,
+          ),
+        );
+
+        print('CartService: POST /cart/items Response status: ${response.statusCode}');
+        print('CartService: POST /cart/items Response data: ${response.data}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print('CartService: Remove item thành công với POST /cart/items');
+          return Cart.fromJson(response.data);
+        } else if (response.statusCode == 401) {
+          print('CartService: 401 Unauthorized với POST /cart/items');
+        }
+      } catch (e) {
+        print('CartService: POST /cart/items endpoint thất bại: $e');
+      }
+
+      // Nếu tất cả đều 401, thử refresh nonce và thử lại
+      if (nonceHeader.isNotEmpty) {
+        print('CartService: Tất cả endpoint đều 401, thử refresh nonce...');
+        try {
+          // Clear nonce cache và lấy nonce mới
+          NonceService.clearNonce();
+          final newNonce = await NonceService.getNonce();
+          print('CartService: Nonce mới: ${newNonce.isNotEmpty ? newNonce.substring(0, 8) + '...' : 'EMPTY'}');
+          
+          if (newNonce.isNotEmpty && newNonce != nonceHeader) {
+            // Thử lại với nonce mới
+            return await removeItem(cartItemKey, newNonce);
+          }
+        } catch (e) {
+          print('CartService: Lỗi khi refresh nonce: $e');
+        }
+      }
+
+      throw Exception('Tất cả các endpoint remove item đều thất bại (401 Unauthorized)');
+      
     } on DioException catch (e) {
+      print('CartService: DioException khi remove item: $e');
       if (e.response != null) {
+        print('CartService: Response status: ${e.response?.statusCode}');
+        print('CartService: Response data: ${e.response?.data}');
         throw Exception('Failed to remove item: ${e.response?.statusCode} - ${e.response?.data}');
       } else {
         throw Exception('Network error: ${e.message}');
       }
     } catch (e) {
+      print('CartService: Unexpected error khi remove item: $e');
       throw Exception('Unexpected error: $e');
     }
   }

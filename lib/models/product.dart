@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Product {
   final int id;
   final String name;
@@ -74,6 +76,11 @@ class Product {
     
     return skuMeta.value.isNotEmpty ? skuMeta.value : null;
   }
+
+  @override
+  String toString() {
+    return JsonEncoder.withIndent('  ').convert(toJson());
+  }
 }
 
 class ProductImage {
@@ -96,6 +103,11 @@ class ProductImage {
   Map<String, dynamic> toJson() {
     return {'id': id, 'src': src, 'name': name, 'alt': alt};
   }
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
+  }
 }
 
 class MetaData {
@@ -110,5 +122,10 @@ class MetaData {
 
   Map<String, dynamic> toJson() {
     return {'key': key, 'value': value};
+  }
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
   }
 }

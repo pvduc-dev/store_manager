@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/models/product.dart';
+import 'package:store_manager/models/cart.dart' show ItemTotals;
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/providers/cart_provider.dart';
 
@@ -492,6 +494,29 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
     productProvider.clearSearch();
     await productProvider.loadProducts(refresh: true);
+  }
+
+  void _debugProduct(Product product) {
+    debugPrint('Product debug:');
+    debugPrint(product.toString());
+  }
+
+  String _formatMoneyFromTotals(String raw, ItemTotals totals) {
+    final minor = totals.currencyMinorUnit;
+    final intVal = int.tryParse(raw) ?? 0;
+    final divisor = math.pow(10, minor);
+    final value = intVal / divisor;
+    final amount = value.toStringAsFixed(minor);
+    final prefix = totals.currencyPrefix;
+    final suffix = totals.currencySuffix;
+    final symbol = totals.currencySymbol;
+    if (prefix.isNotEmpty) {
+      return '$prefix$amount';
+    }
+    if (suffix.isNotEmpty) {
+      return '$amount$suffix';
+    }
+    return symbol.isNotEmpty ? '$amount $symbol' : amount;
   }
 
   @override
@@ -1056,6 +1081,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           context.push('/products/${product.id}');
         }
       },
+      onLongPress: () => _debugProduct(product),
       child: Stack(
         children: [
           Container(
@@ -1342,7 +1368,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
               const SizedBox(height: 4),
               Text(
-                'Tổng: ${((int.tryParse(cartItem.totals.lineTotal) ?? 0) / 100.0).toStringAsFixed(2)} zł',
+                'Tổng: ${_formatMoneyFromTotals(cartItem.totals.lineTotal, cartItem.totals)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],
