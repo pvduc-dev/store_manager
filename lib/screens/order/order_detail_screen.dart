@@ -83,7 +83,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           // Lấy subtotal từ metadata
           String subtotal =
               (order.metaData.firstWhere(
-                        (e) => e['key'] == 'subtotal',
+                        (e) => e['key'] == 'GIA_THUONG_LUONG',
                         orElse: () => {'key': '', 'value': '0'},
                       )['value'] ??
                       0)
@@ -263,7 +263,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
                             // Amount Info
                             _buildInfoRow(
-                              'Tổng tiền trước thuế',
+                              'Netto',
                               '',
                               '${subtotal}${order.currencySymbol}',
                               Colors.black,
@@ -285,7 +285,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
                             const Divider(height: 20, thickness: 1),
                             _buildInfoRow(
-                              'Tổng tiền sau thuế',
+                              'Brutto',
                               '',
                               '${total}${order.currencySymbol}',
                               Colors.red,

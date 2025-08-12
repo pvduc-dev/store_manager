@@ -90,19 +90,26 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         )
         .toList();
 
-    // Khởi tạo hệ số thuế theo công thức: (tổng sau thuế) / (tổng trước thuế)
-    final totalAfterTax = double.tryParse(widget.order.total) ?? 0.0;
-    final totalTax = double.tryParse(widget.order.totalTax) ?? 0.0;
-    final totalBeforeTax = totalAfterTax - totalTax;
-    if (totalBeforeTax > 0) {
-      final estimated = totalAfterTax / totalBeforeTax;
-      if (estimated > 0) {
-        _taxRate = estimated;
-        _taxRateController.text = _taxRate.toStringAsFixed(2);
-      }
-    }
+    // Lấy _netto và _brutto từ meta_data
+    _netto = _getMetaDataValue('GIA_THUONG_LUONG', 0.0);
+    _brutto = _getMetaDataValue('total', 0.0);
 
-    _recalculateTotals();
+    // Khởi tạo hệ số thuế từ _brutto và _netto
+    if (_netto > 0 && _brutto > 0) {
+      _taxRate = _brutto / _netto;
+      
+      // Kiểm tra và giới hạn hệ số thuế trong khoảng hợp lý
+      if (!_isValidTaxRate(_taxRate)) {
+        debugPrint('Warning: Calculated tax rate $_taxRate is outside valid range (1.0-2.0). Clamping to valid range.');
+        _taxRate = _taxRate.clamp(1.0, 2.0);
+      }
+      
+      _taxRateController.text = _taxRate.toStringAsFixed(2);
+    } else {
+      // Nếu không thể tính được từ meta_data, sử dụng giá trị mặc định
+      _taxRate = 1.23;
+      _taxRateController.text = _taxRate.toStringAsFixed(2);
+    }
   }
 
   @override
@@ -445,7 +452,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           ),
           const SizedBox(height: 12),
           _buildSummaryRow(
-            'Tổng tiền trước thuế',
+            'Netto',
             '${_netto.toStringAsFixed(2)} zł',
           ),
           if ((_taxRate - 1) > 0)
@@ -460,7 +467,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
             ),
           const Divider(height: 20, thickness: 1),
           _buildSummaryRow(
-            'Tổng tiền sau thuế',
+            'Brutto',
             '${_brutto.toStringAsFixed(2)} zł',
             isTotal: true,
           ),
@@ -710,7 +717,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           : '',
       'meta_data': [
         {'key': 'total', 'value': _brutto.toStringAsFixed(2)},
-        {'key': 'subtotal', 'value': _netto.toStringAsFixed(2)},
+        {'key': 'GIA_THUONG_LUONG', 'value': _netto.toStringAsFixed(2)},
         {
           'key': 'total_tax',
           'value': (_netto * (_taxRate - 1)).toStringAsFixed(2),
@@ -849,21 +856,122 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   }
 
   void _recalculateTotals() {
-    _netto = _editableItems.fold<double>(
+    // Tính lại _netto từ sản phẩm hiện tại
+    final calculatedNetto = _editableItems.fold<double>(
       0,
       (sum, it) => sum + it.unitPrice * it.quantity,
     );
-    _brutto = _netto * _taxRate;
+    
+    // Cập nhật _netto nếu có thay đổi
+    if (calculatedNetto != _netto) {
+      _netto = calculatedNetto;
+      
+      // Chỉ tính lại _brutto nếu _netto > 0
+      if (_netto > 0) {
+        _brutto = _netto * _taxRate;
+      } else {
+        // Nếu _netto = 0, đặt _brutto = 0
+        _brutto = 0.0;
+      }
+    }
+    
+    // Không cập nhật _taxRate ở đây vì:
+    // 1. Nó sẽ làm mất giá trị người dùng đã nhập
+    // 2. _taxRate chỉ được cập nhật khi người dùng thay đổi trực tiếp
+    // 3. Khi thay đổi sản phẩm, chúng ta muốn giữ nguyên hệ số thuế người dùng đã thiết lập
   }
 
   void _onTaxRateChanged(String value) {
     if (value.trim().isEmpty) return;
     final parsed = double.tryParse(value.replaceAll(',', '.'));
     if (parsed == null || parsed <= 0) return;
+    
+    // Giới hạn hệ số thuế trong khoảng hợp lý (1.0 - 2.0)
+    final clampedTaxRate = parsed.clamp(1.0, 2.0);
+    
     setState(() {
-      _taxRate = parsed;
-      _recalculateTotals();
+      _taxRate = clampedTaxRate;
+      // Tính lại _brutto dựa trên _netto và _taxRate mới
+      _brutto = _netto * _taxRate;
+      
+      // Cập nhật text controller nếu giá trị bị thay đổi do clamp
+      if (clampedTaxRate != parsed) {
+        _taxRateController.text = _taxRate.toStringAsFixed(2);
+      }
     });
+  }
+
+  /// Cập nhật _taxRate dựa trên _brutto và _netto hiện tại
+  void _updateTaxRateFromTotals() {
+    if (_netto > 0) {
+      _taxRate = _brutto / _netto;
+      _taxRateController.text = _taxRate.toStringAsFixed(2);
+    }
+  }
+
+  /// Cập nhật _taxRate để phù hợp với tổng tiền hiện tại
+  /// Được gọi khi muốn tính lại hệ số thuế dựa trên _brutto và _netto
+  void _recalculateTaxRate() {
+    if (_netto > 0) {
+      _taxRate = _brutto / _netto;
+      _taxRateController.text = _taxRate.toStringAsFixed(2);
+    }
+  }
+
+  /// Validate hệ số thuế có hợp lệ không
+  bool _isValidTaxRate(double taxRate) {
+    return taxRate >= 1.0 && taxRate <= 2.0;
+  }
+
+  /// Lấy giá trị từ meta_data theo key
+  T _getMetaDataValue<T>(String key, T defaultValue) {
+    try {
+      if (widget.order.metaData.isEmpty) {
+        debugPrint('Meta_data is empty for order ${widget.order.id}');
+        return defaultValue;
+      }
+      
+      final metaItem = widget.order.metaData.firstWhere(
+        (item) => item['key'] == key,
+        orElse: () => <String, dynamic>{},
+      );
+      
+      if (metaItem.isEmpty) {
+        debugPrint('Meta_data key "$key" not found for order ${widget.order.id}');
+        return defaultValue;
+      }
+      
+      final value = metaItem['value'];
+      if (value == null) {
+        debugPrint('Meta_data value is null for key "$key" in order ${widget.order.id}');
+        return defaultValue;
+      }
+      
+      if (T == double) {
+        final parsed = double.tryParse(value.toString());
+        if (parsed == null) {
+          debugPrint('Failed to parse meta_data value "$value" as double for key "$key"');
+          return defaultValue;
+        }
+        return parsed as T;
+      } else if (T == int) {
+        final parsed = int.tryParse(value.toString());
+        if (parsed == null) {
+          debugPrint('Failed to parse meta_data value "$value" as int for key "$key"');
+          return defaultValue;
+        }
+        return parsed as T;
+      } else if (T == String) {
+        return value.toString() as T;
+      } else if (T == bool) {
+        return (value == 'true' || value == true) as T;
+      }
+      
+      return defaultValue;
+    } catch (e) {
+      debugPrint('Error getting meta_data value for key "$key" in order ${widget.order.id}: $e');
+      return defaultValue;
+    }
   }
 }
 

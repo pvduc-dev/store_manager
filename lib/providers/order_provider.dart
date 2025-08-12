@@ -12,6 +12,7 @@ class OrderProvider extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   bool _isSearching = false;
+  bool _isSearchLoading = false;
   String _searchQuery = '';
   int _currentPage = 1;
   static const int _perPage = 20;
@@ -24,6 +25,7 @@ class OrderProvider extends ChangeNotifier {
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMoreData => _hasMoreData;
   bool get isSearching => _isSearching;
+  bool get isSearchLoading => _isSearchLoading;
   String get searchQuery => _searchQuery;
 
   Future<void> loadOrders({bool refresh = false}) async {
@@ -96,32 +98,98 @@ class OrderProvider extends ChangeNotifier {
     
     if (_searchQuery.isEmpty) {
       _isSearching = false;
+      _isSearchLoading = false;
       _filteredOrders.clear();
       notifyListeners();
       return;
     }
 
     _isSearching = true;
+    _isSearchLoading = true;
     notifyListeners();
 
     try {
-      final searchResults = await OrderService.searchOrders(
+      // Đầu tiên thử tìm kiếm qua WooCommerce API
+      final apiSearchResults = await OrderService.searchOrders(
         search: _searchQuery,
         perPage: 50,
       );
       
-      _filteredOrders = searchResults;
+      // Nếu có kết quả từ API, sử dụng luôn
+      if (apiSearchResults.isNotEmpty) {
+        _filteredOrders = apiSearchResults;
+        _isSearchLoading = false;
+        notifyListeners();
+        return;
+      }
+      
+      // Nếu không có kết quả từ API, thực hiện tìm kiếm local
+      _filteredOrders = _searchOrdersLocal(_searchQuery);
+      _isSearchLoading = false;
       notifyListeners();
+      
     } catch (e) {
-      print('Error searching orders: $e');
-      _filteredOrders = [];
+      print('Error searching orders via API, falling back to local search: $e');
+      // Fallback về tìm kiếm local nếu API lỗi
+      _filteredOrders = _searchOrdersLocal(_searchQuery);
+      _isSearchLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Tìm kiếm đơn hàng theo tên KH, NIP, số điện thoại trong dữ liệu local
+  List<Order> _searchOrdersLocal(String query) {
+    if (query.isEmpty) return [];
+    
+    final lowerQuery = query.toLowerCase();
+    final results = <Order>[];
+    
+    for (final order in _orders) {
+      // Tìm theo tên khách hàng (first name + last name)
+      final customerName = '${order.billing.firstName} ${order.billing.lastName}'.toLowerCase();
+      if (customerName.contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+      
+      // Tìm theo NIP (company)
+      if (order.billing.company.toLowerCase().contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+      
+      // Tìm theo số điện thoại
+      if (order.billing.phone.toLowerCase().contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+      
+      // Tìm theo email
+      if (order.billing.email.toLowerCase().contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+      
+      // Tìm theo mã đơn hàng
+      if (order.number.toLowerCase().contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+      
+      // Tìm theo order ID
+      if (order.id.toString().contains(lowerQuery)) {
+        results.add(order);
+        continue;
+      }
+    }
+    
+    return results;
   }
 
   void clearSearch() {
     _searchQuery = '';
     _isSearching = false;
+    _isSearchLoading = false;
     _filteredOrders.clear();
     notifyListeners();
   }

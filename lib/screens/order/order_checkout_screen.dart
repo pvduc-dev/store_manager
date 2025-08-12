@@ -590,7 +590,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
       'meta_data': [
         {'key': 'total', 'value': _brutto.toStringAsFixed(2)},
-        {'key': 'subtotal', 'value': _netto.toStringAsFixed(2)},
+        {'key': 'GIA_THUONG_LUONG', 'value': _netto.toStringAsFixed(2)},
         {'key': 'total_tax', 'value': (_brutto - _netto).toStringAsFixed(2)},
       ],
     };

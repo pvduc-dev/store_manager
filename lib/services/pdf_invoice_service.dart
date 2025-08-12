@@ -102,7 +102,7 @@ class PdfInvoiceService {
                 ),
               ]),
               pw.SizedBox(height: 10),
-              buildInfoRow('Tổng tiền trước thuế', '${subtotal.toInt()}$currencySymbol'),
+              buildInfoRow('Netto', '${subtotal.toInt()}$currencySymbol'),
               if ((double.tryParse(order.totalTax) ?? 0) > 0)
                 buildInfoRow('Thuế', '${(double.tryParse(order.totalTax) ?? 0).toInt()}$currencySymbol', color: PdfColors.orange),
               if ((double.tryParse(order.shippingTotal) ?? 0) > 0)
@@ -110,7 +110,7 @@ class PdfInvoiceService {
               if ((double.tryParse(order.discountTotal) ?? 0) > 0)
                 buildInfoRow('Giảm giá', '-${(double.tryParse(order.discountTotal) ?? 0).toInt()}$currencySymbol', color: PdfColors.green),
               pw.Divider(height: 16, thickness: 0.7, color: PdfColors.grey300),
-              buildInfoRow('Tổng tiền sau thuế', '${(double.tryParse(order.total) ?? 0).toInt()}$currencySymbol', color: PdfColors.red),
+              buildInfoRow('Brutto', '${(double.tryParse(order.total) ?? 0).toInt()}$currencySymbol', color: PdfColors.red),
               buildInfoRow('Số sản phẩm', '${order.lineItems.length} sản phẩm'),
               buildInfoRow('Thời gian đặt hàng', dateFormat.format(order.dateCreated.toLocal())),
               if (order.datePaid != null)

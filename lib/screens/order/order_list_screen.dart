@@ -120,10 +120,22 @@ class _OrderListScreenState extends State<OrderListScreen>
                               vertical: 12,
                             ),
                             suffixIcon: orderProvider.isSearching
-                                ? IconButton(
-                                    icon: Icon(Icons.clear, color: Colors.grey),
-                                    onPressed: _clearSearch,
-                                  )
+                                ? orderProvider.isSearchLoading
+                                    ? Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                          ),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: Icon(Icons.clear, color: Colors.grey),
+                                        onPressed: _clearSearch,
+                                      )
                                 : null,
                           ),
                         ),
@@ -151,6 +163,23 @@ class _OrderListScreenState extends State<OrderListScreen>
                             ),
                           ),
                         ),
+                      ] else if (orderProvider.isSearchLoading) ...[
+                        Container(
+                          height: 48,
+                          width: 1,
+                          color: Colors.grey[300],
+                        ),
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -167,6 +196,28 @@ class _OrderListScreenState extends State<OrderListScreen>
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Hiển thị loading khi đang tìm kiếm và chưa có kết quả
+                if (orderProvider.isSearching && orderProvider.isSearchLoading && orderProvider.orders.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Đang tìm kiếm "${orderProvider.searchQuery}"...',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (orderProvider.orders.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: () => _onRefresh(context),
@@ -175,11 +226,36 @@ class _OrderListScreenState extends State<OrderListScreen>
                         SizedBox(
                           height: 200,
                           child: Center(
-                            child: Text(
-                              orderProvider.isSearching
-                                  ? 'Không tìm thấy đơn hàng với mã "${orderProvider.searchQuery}"'
-                                  : 'Không có đơn hàng nào',
-                              textAlign: TextAlign.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  orderProvider.isSearching ? Icons.search_off : Icons.inbox_outlined,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  orderProvider.isSearching
+                                      ? 'Không tìm thấy đơn hàng với từ khóa "${orderProvider.searchQuery}"'
+                                      : 'Không có đơn hàng nào',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                if (orderProvider.isSearching) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Thử tìm kiếm với từ khóa khác',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
