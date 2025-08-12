@@ -19,7 +19,7 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   bool _isSelectionMode = false;
   bool _isShoppingMode = false;
   Set<int> _selectedProductIds = <int>{};
@@ -63,14 +63,20 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   // MARK: - Search Methods
   void _onSearchChanged() {
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     if (_searchController.text.isEmpty && productProvider.isSearching) {
       productProvider.clearSearch();
     }
   }
 
   void _syncSearchController() {
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     if (productProvider.searchQuery != _searchController.text) {
       _searchController.removeListener(_onSearchChanged);
       _searchController.text = productProvider.searchQuery;
@@ -79,7 +85,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   void _performSearch() {
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
       productProvider.searchProducts(query);
@@ -92,16 +101,23 @@ class _ProductListScreenState extends State<ProductListScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.clear();
     _searchController.addListener(_onSearchChanged);
-    
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     productProvider.clearSearch();
     await productProvider.loadProducts(refresh: true);
   }
 
   // MARK: - Scroll Methods
   void _onScroll() {
-    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      final productProvider = Provider.of<ProductProvider>(
+        context,
+        listen: false,
+      );
       productProvider.loadMoreProducts();
     }
   }
@@ -170,20 +186,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
         (p) => p.id == productId,
         orElse: () => throw Exception('Sản phẩm không tồn tại'),
       );
-      
-      final customPrice = product.metaData
-          .where((element) => element.key == 'custom_price')
-          .firstOrNull
-          ?.value ?? '0';
-      
+
+      final customPrice =
+          product.metaData
+              .where((element) => element.key == 'custom_price')
+              .firstOrNull
+              ?.value ??
+          '0';
+
       final price = double.tryParse(customPrice) ?? 0.0;
-      
+
       await context.read<CartProvider>().updateItem(
-        productId, 
+        productId,
         quantity: newQuantity,
         price: price,
       );
-      
+
       if (mounted) {
         setState(() {});
       }
@@ -266,13 +284,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   Future<void> _deleteSelectedProducts() async {
     final selectedCount = _selectedProductIds.length;
-    context.read<ProductProvider>().deleteProducts(_selectedProductIds.toList());
+    context.read<ProductProvider>().deleteProducts(
+      _selectedProductIds.toList(),
+    );
     _clearSelection();
     setState(() => _isSelectionMode = false);
     _showSuccessSnackBar('Đã xóa $selectedCount sản phẩm');
   }
 
-  void _showSortBottomSheet(BuildContext context, ProductProvider productProvider) {
+  void _showSortBottomSheet(
+    BuildContext context,
+    ProductProvider productProvider,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -365,7 +388,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   Widget? _buildFloatingActionButton() {
     if (_isSelectionMode || _isShoppingMode) return null;
-    
+
     return FloatingActionButton(
       onPressed: () => context.push('/products/add'),
       backgroundColor: Colors.blue,
@@ -437,7 +460,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     return Consumer<ProductProvider>(
       builder: (context, productProvider, child) {
         if (!productProvider.isSearching) return const SizedBox.shrink();
-        
+
         return IconButton(
           icon: Icon(Icons.clear, color: Colors.grey[600]),
           onPressed: () {
@@ -628,11 +651,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.check_circle,
-                color: Colors.blue[700],
-                size: 18,
-              ),
+              Icon(Icons.check_circle, color: Colors.blue[700], size: 18),
               const SizedBox(width: 8),
               Text(
                 'Chế độ chọn sản phẩm',
@@ -648,7 +667,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   onPressed: _clearSelection,
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red[700],
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
                   child: const Text(
                     'Bỏ chọn tất cả',
@@ -667,13 +689,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.blue[700],
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
                 child: Text(
                   selectedCount == totalCount
                       ? 'Bỏ chọn tất cả'
                       : 'Chọn tất cả',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -732,18 +760,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
         icon: const Icon(Icons.delete, size: 18, color: Colors.white),
         label: const Text(
           'Xóa',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         style: FilledButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -756,7 +778,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         final itemCount = cartProvider.itemCount;
-        final total = cartProvider.total;
+        final total = cartProvider.subtotal;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -821,10 +843,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         style: FilledButton.styleFrom(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           minimumSize: const Size(0, 32),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -836,7 +855,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
       );
     }
-    
+
     return Text(
       'Giỏ hàng trống',
       style: TextStyle(color: Colors.grey[500], fontSize: 12),
@@ -878,7 +897,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
       ),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      itemCount: productProvider.products.length +
+      itemCount:
+          productProvider.products.length +
           (productProvider.hasMoreData ? 2 : 0),
       itemBuilder: (context, index) {
         if (index >= productProvider.products.length) {
@@ -1028,11 +1048,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   DecorationImage? _buildProductImageDecoration(Product product) {
     if (product.images.isEmpty) return null;
-    
+
     return DecorationImage(
-      image: CachedNetworkImageProvider(
-        product.images.first.src ?? '',
-      ),
+      image: CachedNetworkImageProvider(product.images.first.src ?? ''),
       fit: BoxFit.cover,
       onError: (exception, stackTrace) => null,
     );
@@ -1040,13 +1058,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   Widget? _buildProductImagePlaceholder(Product product) {
     if (product.images.isNotEmpty) return null;
-    
+
     return Center(
-      child: Icon(
-        Icons.image_not_supported,
-        color: Colors.grey[400],
-        size: 40,
-      ),
+      child: Icon(Icons.image_not_supported, color: Colors.grey[400], size: 40),
     );
   }
 
@@ -1087,16 +1101,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   String _getProductCustomPrice(Product product) {
     return product.metaData
-        .where((element) => element.key == 'custom_price')
-        .firstOrNull
-        ?.value ?? '0';
+            .where((element) => element.key == 'custom_price')
+            .firstOrNull
+            ?.value ??
+        '0';
   }
 
   String _getProductPacka(Product product) {
     return product.metaData
-        .where((element) => element.key == 'packa')
-        .firstOrNull
-        ?.value ?? '';
+            .where((element) => element.key == 'packa')
+            .firstOrNull
+            ?.value ??
+        '';
   }
 
   Widget _buildSelectionIndicator(bool isSelected, int productId) {
@@ -1129,7 +1145,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         final productId = product.id;
-        final isInCart = cartProvider.cart.items.any((item) => item.product.id == productId);
+        final isInCart = cartProvider.cart.items.any(
+          (item) => item.product.id == productId,
+        );
 
         if (!isInCart) {
           return _buildAddToCartButton(product);
@@ -1160,10 +1178,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           child: const Text(
             'Thêm vào giỏ',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
         ),
       ),
@@ -1225,11 +1240,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       child: IconButton(
         onPressed: () => _updateCartItem(productId, newQuantity),
         padding: EdgeInsets.zero,
-        icon: Icon(
-          icon,
-          size: 16,
-          color: iconColor,
-        ),
+        icon: Icon(icon, size: 16, color: iconColor),
       ),
     );
   }

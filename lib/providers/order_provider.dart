@@ -179,6 +179,52 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  /// Cập nhật toàn bộ thông tin đơn hàng
+  Future<Order?> updateOrder(int orderId, Map<String, dynamic> orderData) async {
+    try {
+      print('OrderProvider: Bắt đầu cập nhật đơn hàng $orderId...');
+      _isLoading = true;
+      notifyListeners();
+
+      print('OrderProvider: Dữ liệu cập nhật: ${orderData.toString()}');
+      
+      final updatedOrder = await OrderService.updateOrder(
+        orderId: orderId,
+        orderData: orderData,
+      );
+      
+      print('OrderProvider: Đơn hàng được cập nhật thành công: ${updatedOrder?.id}');
+      
+      if (updatedOrder != null) {
+        // Cập nhật order trong danh sách
+        _ordersMap[orderId] = updatedOrder;
+        
+        final index = _orders.indexWhere((o) => o.id == orderId);
+        if (index != -1) {
+          _orders[index] = updatedOrder;
+        }
+        
+        if (_isSearching) {
+          final searchIndex = _filteredOrders.indexWhere((o) => o.id == orderId);
+          if (searchIndex != -1) {
+            _filteredOrders[searchIndex] = updatedOrder;
+          }
+        }
+        
+        notifyListeners();
+      }
+      
+      return updatedOrder;
+    } catch (e) {
+      print('OrderProvider: Lỗi khi cập nhật đơn hàng: $e');
+      print('OrderProvider: Stack trace: ${StackTrace.current}');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> deleteOrder(int orderId) async {
     try {
       final success = await OrderService.deleteOrder(orderId);

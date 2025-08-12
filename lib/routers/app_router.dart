@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:store_manager/providers/auth_provider.dart';
+import 'package:store_manager/models/order.dart';
 import 'package:store_manager/screens/customer/customer_detail_screen.dart';
 import 'package:store_manager/screens/customer/customer_list_screen.dart';
 import 'package:store_manager/screens/customer/customer_new_screen.dart';
@@ -9,8 +10,9 @@ import 'package:store_manager/screens/new_product_screen.dart';
 import 'package:store_manager/screens/product/product_detail.dart';
 import 'package:store_manager/screens/product/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
-import 'package:store_manager/screens/order_list_screen.dart';
+import 'package:store_manager/screens/order/order_list_screen.dart';
 import 'package:store_manager/screens/order/order_detail_screen.dart';
+import 'package:store_manager/screens/order/order_edit_screen.dart';
 import 'package:store_manager/screens/customer/customer_edit_screen.dart';
 import 'package:store_manager/screens/cart_screen.dart';
 import 'package:store_manager/screens/order/order_checkout_screen.dart';
@@ -74,6 +76,13 @@ class AppRouter {
           path: '/orders/:id',
           builder: (context, state) =>
               OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/orders/:id/edit',
+          builder: (context, state) {
+            final order = state.extra as Order;
+            return OrderEditScreen(order: order);
+          },
         ),
         GoRoute(
           path: '/customers/new',

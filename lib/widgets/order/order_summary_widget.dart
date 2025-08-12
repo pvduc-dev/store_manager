@@ -24,7 +24,7 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
   void initState() {
     super.initState();
     // Sử dụng total từ model Cart mới
-    _netto = widget.cart.total;
+    _netto = widget.cart.subtotal;
 
     _coefficientController = TextEditingController(text: '1.23');
     _calculateBrutto(notifyParent: false);
@@ -91,9 +91,7 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
               ],
               _buildSummaryRow('Tổng tiền hàng', '${widget.cart.subtotal.toStringAsFixed(2)} zł'),
               const SizedBox(height: 8),
-              _buildSummaryRow('Thuế', '${widget.cart.tax.toStringAsFixed(2)} zł'),
-              const SizedBox(height: 8),
-              _buildSummaryRow('Tổng cộng', '${widget.cart.total.toStringAsFixed(2)} zł', isTotal: true),
+              _buildSummaryRow('Tổng cộng', '${widget.cart.subtotal.toStringAsFixed(2)} zł', isTotal: true),
               const SizedBox(height: 16),
               Container(height: 1, color: Colors.grey.shade300),
               const SizedBox(height: 16),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../models/order.dart';
-import '../providers/order_provider.dart';
+import '../../models/order.dart';
+import '../../providers/order_provider.dart';
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});
@@ -11,16 +11,17 @@ class OrderListScreen extends StatefulWidget {
   State<OrderListScreen> createState() => _OrderListScreenState();
 }
 
-class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingObserver {
+class _OrderListScreenState extends State<OrderListScreen>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Load orders khi màn hình được khởi tạo
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialOrders();
@@ -45,14 +46,16 @@ class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingOb
   }
 
   void _loadInitialOrders() {
-    if (mounted) {
-      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-      orderProvider.loadOrders(refresh: true);
-    }
+    if (!mounted) return;
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final hasExistingData = orderProvider.orders.isNotEmpty;
+    // Nếu đã có dữ liệu, load lại nhẹ nhàng (không clear và không hiển thị loading)
+    orderProvider.loadOrders(refresh: !hasExistingData);
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       orderProvider.loadMoreOrders();
     }
@@ -109,9 +112,13 @@ class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingOb
                           onSubmitted: (value) => _handleSearch(),
                           decoration: InputDecoration(
                             prefixIcon: Icon(Icons.search, color: Colors.grey),
-                            hintText: 'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
+                            hintText:
+                                'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             suffixIcon: orderProvider.isSearching
                                 ? IconButton(
                                     icon: Icon(Icons.clear, color: Colors.grey),
@@ -156,7 +163,7 @@ class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingOb
           Expanded(
             child: Consumer<OrderProvider>(
               builder: (context, orderProvider, child) {
-                if (orderProvider.isLoading) {
+                if (orderProvider.isLoading && orderProvider.orders.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
@@ -169,7 +176,7 @@ class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingOb
                           height: 200,
                           child: Center(
                             child: Text(
-                              orderProvider.isSearching 
+                              orderProvider.isSearching
                                   ? 'Không tìm thấy đơn hàng với mã "${orderProvider.searchQuery}"'
                                   : 'Không có đơn hàng nào',
                               textAlign: TextAlign.center,
@@ -185,19 +192,25 @@ class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingOb
                   onRefresh: () => _onRefresh(context),
                   child: ListView.builder(
                     controller: _scrollController,
-                    itemCount: orderProvider.orders.length + 
-                        (orderProvider.hasMoreData && !orderProvider.isSearching ? 1 : 0),
+                    itemCount:
+                        orderProvider.orders.length +
+                        (orderProvider.hasMoreData && !orderProvider.isSearching
+                            ? 1
+                            : 0),
                     itemBuilder: (context, index) {
-                      if (index == orderProvider.orders.length && !orderProvider.isSearching) {
+                      if (index == orderProvider.orders.length &&
+                          !orderProvider.isSearching) {
                         // Load more indicator (chỉ hiển thị khi không tìm kiếm)
                         return orderProvider.isLoadingMore
                             ? const Padding(
                                 padding: EdgeInsets.all(16.0),
-                                child: Center(child: CircularProgressIndicator()),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               )
                             : const SizedBox.shrink();
                       }
-                      
+
                       final order = orderProvider.orders[index];
                       return _buildOrderItem(context, order);
                     },

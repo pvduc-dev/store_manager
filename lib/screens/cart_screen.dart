@@ -717,12 +717,6 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _handlePayment(BuildContext context) {
-    // TODO: Implement payment logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chức năng thanh toán đang được phát triển'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+    context.push("/order/checkout");
   }
 }

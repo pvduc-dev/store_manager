@@ -21,7 +21,7 @@ class OrderCheckoutScreen extends StatefulWidget {
 class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   // Form key for validation
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
   late final TextEditingController _lastNameController;
   late final TextEditingController _nipController;
@@ -29,7 +29,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _notesController;
-  
+
   // State variables
   String? _selectedCustomerCompany;
   bool _hasSelectedCustomer = false;
@@ -72,7 +72,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   void _onLastNameChanged() {
     if (!mounted) return;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -87,7 +87,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   void _onFieldChanged() {
     if (!mounted) return;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() {});
     });
@@ -95,7 +95,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   void _updateOrderValues(double netto, double brutto) {
     if (!mounted) return;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -109,10 +109,10 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   void _updateOrderValuesFromCart(Cart cart) {
     if (!mounted) return;
-    
+
     final totalPrice = _extractTotalPrice(cart);
     final newBrutto = totalPrice * 1.23;
-    
+
     if (_netto != totalPrice || _brutto != newBrutto) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -191,10 +191,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
             }
           }
         },
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.black,
-        ),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
       ),
     );
   }
@@ -318,7 +315,8 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   Widget _buildNotesField() {
     return AppTextInput(
       label: 'Ghi chú đơn hàng (tuỳ chọn)',
-      placeholder: 'Ghi chú về đơn hàng, ví dụ: thời gian hay chỉ dẫn địa điểm gian hàng chi tiết hơn',
+      placeholder:
+          'Ghi chú về đơn hàng, ví dụ: thời gian hay chỉ dẫn địa điểm gian hàng chi tiết hơn',
       controller: _notesController,
       prefixIcon: Icons.note,
       maxLines: 4,
@@ -358,10 +356,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   }
 
   Widget _buildOrderSummarySection(Cart cart) {
-    return OrderSummaryWidget(
-      cart: cart,
-      onValuesChanged: _updateOrderValues,
-    );
+    return OrderSummaryWidget(cart: cart, onValuesChanged: _updateOrderValues);
   }
 
   Widget _buildBillingAddressSection() {
@@ -481,36 +476,36 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   }
 
   String _getCustomerEmail(Customer customer) {
-    return customer.email.isNotEmpty 
-        ? customer.email 
+    return customer.email.isNotEmpty
+        ? customer.email
         : customer.billingAddress.email;
   }
 
   String _getCustomerPhone(Customer customer) {
-    return customer.phone.isNotEmpty 
-        ? customer.phone 
+    return customer.phone.isNotEmpty
+        ? customer.phone
         : customer.billingAddress.phone;
   }
 
   String _getCustomerAddress(Customer customer) {
-    return customer.billingAddress.fullAddress.isNotEmpty 
-        ? customer.billingAddress.fullAddress 
+    return customer.billingAddress.fullAddress.isNotEmpty
+        ? customer.billingAddress.fullAddress
         : '';
   }
 
   String _getCustomerNip(Customer customer) {
     if (customer.nip.isNotEmpty) return customer.nip;
     if (customer.company.isNotEmpty) return customer.company;
-    return customer.billingAddress.company.isNotEmpty 
-        ? customer.billingAddress.company 
+    return customer.billingAddress.company.isNotEmpty
+        ? customer.billingAddress.company
         : '';
   }
 
   void _updateCustomerSelection(Customer customer) {
     if (!mounted) return;
-    
-    _selectedCustomerCompany = customer.company.isNotEmpty 
-        ? customer.company 
+
+    _selectedCustomerCompany = customer.company.isNotEmpty
+        ? customer.company
         : customer.billingAddress.company;
     _hasSelectedCustomer = true;
     setState(() {});
@@ -527,7 +522,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   // Checkout process
   Future<void> _handleCheckout(CartProvider cartProvider) async {
     if (!mounted) return;
-    
+
     if (!_formKey.currentState!.validate()) {
       _showErrorMessage('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
@@ -544,10 +539,10 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
         backgroundColor: Colors.blue,
         duration: const Duration(seconds: 2),
       );
-      
+
       final orderData = await _prepareOrderData(cartProvider);
       final newOrder = await _createOrder(orderData);
-      
+
       if (newOrder != null) {
         await _handleSuccessfulOrder(cartProvider, newOrder);
       } else {
@@ -564,18 +559,20 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     }
   }
 
-  Future<Map<String, dynamic>> _prepareOrderData(CartProvider cartProvider) async {
+  Future<Map<String, dynamic>> _prepareOrderData(
+    CartProvider cartProvider,
+  ) async {
     final cart = cartProvider.cart;
     if (cart == null) {
       throw Exception('Giỏ hàng trống');
     }
-    
+
     final customerData = _buildCustomerData();
     final lineItems = _buildLineItems(cart);
     final shippingLines = _buildShippingLines(cart);
     final _netto = _calculateNetto(cart);
     final _brutto = _calculateBrutto(cart);
-    
+
     final orderData = {
       'payment_method': 'cod',
       'payment_method_title': 'Thanh toán khi nhận hàng',
@@ -586,13 +583,17 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
       'shipping_lines': shippingLines,
       'fee_lines': [],
       'coupon_lines': [],
-      'customer_note': _notesController.text.isNotEmpty ? _notesController.text : '',
+      'customer_note': _notesController.text.isNotEmpty
+          ? _notesController.text
+          : '',
       'status': 'pending',
       'total': _brutto.toStringAsFixed(2),
       'subtotal': _netto.toStringAsFixed(2),
       'total_tax': (_brutto - _netto).toStringAsFixed(2),
     };
-
+    print(
+      'OrderCheckoutScreen: Đang chuẩn bị dữ liệu đơn hàng: ${orderData.toString()}',
+    );
     return orderData;
   }
 
@@ -612,10 +613,12 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     final lineItems = cart.items.map((item) {
       // Sử dụng totalPrice từ model CartItem mới
       final double totalPrice = item.totalPrice;
-      
+
       // Tính giá đơn vị (giá mỗi sản phẩm)
-      final double unitPrice = item.quantity > 0 ? totalPrice / item.quantity : 0;
-      
+      final double unitPrice = item.quantity > 0
+          ? totalPrice / item.quantity
+          : 0;
+
       return {
         'product_id': item.product.id,
         'quantity': item.quantity,
@@ -623,7 +626,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
         'unit_price': unitPrice.toStringAsFixed(2),
       };
     }).toList();
-    
+
     return lineItems;
   }
 
@@ -633,12 +636,12 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
         'method_id': 'flat_rate',
         'method_title': 'Phí vận chuyển',
         'total': '0', // Không có phí vận chuyển trong model mới
-      }
+      },
     ];
   }
 
   double _calculateNetto(Cart cart) {
-    return cart.total;
+    return cart.subtotal;
   }
 
   double _calculateBrutto(Cart cart) {
@@ -648,12 +651,12 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   Future<dynamic> _createOrder(Map<String, dynamic> orderData) async {
     if (!mounted) return null;
-    
+
     try {
       final orderProvider = context.read<OrderProvider>();
-      
+
       final result = await orderProvider.createOrder(orderData);
-      
+
       return result;
     } catch (e) {
       debugPrint('Error creating order: $e');
@@ -661,20 +664,25 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     }
   }
 
-  Future<void> _handleSuccessfulOrder(CartProvider cartProvider, dynamic newOrder) async {
+  Future<void> _handleSuccessfulOrder(
+    CartProvider cartProvider,
+    dynamic newOrder,
+  ) async {
     // Lưu thông tin order trước khi clear cart
     final orderNumber = newOrder.number ?? 'N/A';
     final orderTotal = newOrder.total != null ? '${newOrder.total}' : 'N/A';
-    
-    print('OrderCheckoutScreen: Bắt đầu clear cart sau khi tạo đơn hàng thành công');
-    
+
+    print(
+      'OrderCheckoutScreen: Bắt đầu clear cart sau khi tạo đơn hàng thành công',
+    );
+
     try {
       // Clear cart với timeout và retry
       await _clearCartWithRetry(cartProvider);
       print('OrderCheckoutScreen: Clear cart thành công');
     } catch (e) {
       print('OrderCheckoutScreen: Lỗi khi clear cart: $e');
-      
+
       // Hiển thị thông báo cảnh báo nhưng không dừng quá trình
       if (mounted) {
         _showSnackBarSafely(
@@ -685,17 +693,19 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
       }
       // Không throw error vì đơn hàng đã tạo thành công
     }
-    
+
     // Kiểm tra mounted sau khi clear cart
     if (!mounted) return;
-    
+
     // Sử dụng addPostFrameCallback để đảm bảo context an toàn
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && context.mounted) {
         try {
           // Hiển thị thông báo thành công với thông tin chi tiết
-          _showSuccessMessage('🎉 Đặt hàng thành công!\n📝 Mã đơn hàng: #$orderNumber\n💰 Tổng tiền: $orderTotal');
-          
+          _showSuccessMessage(
+            '🎉 Đặt hàng thành công!\n📝 Mã đơn hàng: #$orderNumber\n💰 Tổng tiền: $orderTotal',
+          );
+
           // Chuyển hướng ngay lập tức đến màn hình danh sách đơn hàng
           _navigateToOrders();
         } catch (e) {
@@ -709,30 +719,39 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   Future<void> _clearCartWithRetry(CartProvider cartProvider) async {
     int retryCount = 0;
     const maxRetries = 3;
-    
+
     while (retryCount < maxRetries) {
       try {
-        print('OrderCheckoutScreen: Lần thử ${retryCount + 1}/$maxRetries - Clear cart');
+        print(
+          'OrderCheckoutScreen: Lần thử ${retryCount + 1}/$maxRetries - Clear cart',
+        );
         await cartProvider.clearCart();
         return; // Thành công
       } catch (e) {
         retryCount++;
-        print('OrderCheckoutScreen: Lần thử $retryCount/$maxRetries - Lỗi clear cart: $e');
-        
+        print(
+          'OrderCheckoutScreen: Lần thử $retryCount/$maxRetries - Lỗi clear cart: $e',
+        );
+
         // Nếu là lỗi 401, thử lại ngay lập tức
-        if (e.toString().contains('401') || e.toString().contains('Authentication failed')) {
+        if (e.toString().contains('401') ||
+            e.toString().contains('Authentication failed')) {
           if (retryCount < maxRetries) {
             print('OrderCheckoutScreen: Lỗi 401, thử lại ngay lập tức...');
             continue;
           } else {
-            print('OrderCheckoutScreen: Đã thử hết $maxRetries lần với lỗi 401');
+            print(
+              'OrderCheckoutScreen: Đã thử hết $maxRetries lần với lỗi 401',
+            );
             rethrow;
           }
         }
-        
+
         // Với các lỗi khác, đợi trước khi thử lại
         if (retryCount < maxRetries) {
-          print('OrderCheckoutScreen: Đợi 1 giây trước khi thử lại clear cart...');
+          print(
+            'OrderCheckoutScreen: Đợi 1 giây trước khi thử lại clear cart...',
+          );
           await Future.delayed(const Duration(seconds: 1));
         } else {
           print('OrderCheckoutScreen: Đã thử hết $maxRetries lần clear cart');
@@ -742,19 +761,19 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     }
   }
 
-
-
   /// Chuyển hướng đến màn hình danh sách đơn hàng
   void _navigateToOrders() {
     if (!mounted || !context.mounted) return;
-    
+
     try {
-      print('OrderCheckoutScreen: Chuyển hướng ngay lập tức đến màn hình danh sách đơn hàng');
-      
+      print(
+        'OrderCheckoutScreen: Chuyển hướng ngay lập tức đến màn hình danh sách đơn hàng',
+      );
+
       // Thông báo cho OrderProvider để refresh danh sách
       final orderProvider = context.read<OrderProvider>();
       orderProvider.loadOrders(refresh: true);
-      
+
       // Chuyển hướng
       context.go('/orders');
     } catch (e) {
@@ -767,8 +786,6 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
       }
     }
   }
-
-
 
   void _showErrorMessage(String message) {
     _showSnackBarSafely(
@@ -789,7 +806,9 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
         onPressed: () {
           if (mounted && context.mounted) {
             try {
-              print('OrderCheckoutScreen: Chuyển hướng từ SnackBar đến danh sách đơn hàng');
+              print(
+                'OrderCheckoutScreen: Chuyển hướng từ SnackBar đến danh sách đơn hàng',
+              );
               context.go('/orders');
             } catch (e) {
               debugPrint('Error navigating to orders from snackbar: $e');
@@ -809,7 +828,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   }) {
     // Kiểm tra widget có còn mounted và context có còn valid không
     if (!mounted) return;
-    
+
     // Sử dụng addPostFrameCallback để đảm bảo context đã sẵn sàng
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && context.mounted) {

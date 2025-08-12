@@ -36,16 +36,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          TextButton(
-            child: const Text(
-              'Sửa',
-              style: TextStyle(
-                color: Colors.blue,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onPressed: () {
-              // Implement edit functionality
+          Consumer<OrderProvider>(
+            builder: (context, orderProvider, child) {
+              final orderId = int.tryParse(widget.orderId);
+              if (orderId == null) return const SizedBox.shrink();
+              
+              final order = orderProvider.getOrderById(orderId);
+              if (order == null) return const SizedBox.shrink();
+              
+              return TextButton(
+                child: const Text(
+                  'Sửa',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: () {
+                  // Navigate to edit screen
+                  context.push('/orders/${order.id}/edit', extra: order);
+                },
+              );
             },
           ),
         ],
