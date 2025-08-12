@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/order.dart';
 
@@ -13,7 +14,35 @@ class PdfInvoiceService {
     try {
       final pdf = pw.Document();
 
-      // Dùng font mặc định (Helvetica). Lưu ý: không hỗ trợ Unicode mở rộng.
+      // Nạp font từ assets để hiển thị tiếng Việt offline
+      late final pw.Font baseFont;
+      late final pw.Font boldFont;
+      late final pw.Font italicFont;
+      late final pw.Font boldItalicFont;
+      try {
+        final regularData = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
+        baseFont = pw.Font.ttf(regularData);
+      } catch (_) {
+        baseFont = pw.Font.helvetica();
+      }
+      try {
+        final boldData = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
+        boldFont = pw.Font.ttf(boldData);
+      } catch (_) {
+        boldFont = pw.Font.helveticaBold();
+      }
+      try {
+        final italicData = await rootBundle.load('assets/fonts/NotoSans-Italic.ttf');
+        italicFont = pw.Font.ttf(italicData);
+      } catch (_) {
+        italicFont = pw.Font.helveticaOblique();
+      }
+      try {
+        final boldItalicData = await rootBundle.load('assets/fonts/NotoSans-BoldItalic.ttf');
+        boldItalicFont = pw.Font.ttf(boldItalicData);
+      } catch (_) {
+        boldItalicFont = pw.Font.helveticaBoldOblique();
+      }
 
       final currencySymbol = order.currencySymbol.isNotEmpty ? order.currencySymbol : '₫';
       final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
@@ -205,7 +234,7 @@ class PdfInvoiceService {
           headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
           headerDecoration: const pw.BoxDecoration(color: PdfColors.blue),
           cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          cellStyle: const pw.TextStyle(fontSize: 10),
+          cellStyle: pw.TextStyle(fontSize: 10, font: baseFont),
           oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           columnWidths: {
             0: const pw.FlexColumnWidth(3),
@@ -261,8 +290,10 @@ class PdfInvoiceService {
           pageTheme: pw.PageTheme(
             margin: const pw.EdgeInsets.all(20),
             theme: pw.ThemeData.withFont(
-              base: pw.Font.helvetica(),
-              bold: pw.Font.helveticaBold(),
+              base: baseFont,
+              bold: boldFont,
+              italic: italicFont,
+              boldItalic: boldItalicFont,
             ),
           ),
           build: (context) => [
