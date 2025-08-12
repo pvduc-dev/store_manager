@@ -334,57 +334,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             if (order.billing.phone.isNotEmpty)
                               _buildInfoRow('Số điện thoại', '', order.billing.phone, Colors.black),
                             
-                            // Billing Address
-                            if (order.billing.address1.isNotEmpty || order.billing.city.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              _buildInfoRow('Địa chỉ thanh toán', '', '', Colors.black),
-                              if (order.billing.address1.isNotEmpty)
-                              Container(
-                                width: double.infinity,
-                                child: Text(
-                                    order.billing.address1,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[700],
-                                    ),
-                                    textAlign: TextAlign.right,
-                                ),
-                              ),
-                                
-                              if (order.billing.address2.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
-                                  child: Text(
-                                    order.billing.address2,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                ),
-                              if (order.billing.city.isNotEmpty || order.billing.state.isNotEmpty || order.billing.postcode.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
-                                  child: Text(
-                                    '${order.billing.city.isNotEmpty ? order.billing.city : ''}${order.billing.state.isNotEmpty ? ', ${order.billing.state}' : ''}${order.billing.postcode.isNotEmpty ? ' ${order.billing.postcode}' : ''}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                ),
-                              if (order.billing.country.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
-                                  child: Text(
-                                    order.billing.country,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                ),
-                            ],
+                        
                           ],
                         ),
                       ),
@@ -633,39 +583,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  item.sku,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'x${item.quantity}',
+                  'Số lượng: ${item.quantity}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                'Giá: ${item.price.toInt()} zł',
+                style: const TextStyle(
+                  fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+
+                  color: Colors.red,
+                ),
+              ),
               ],
             ),
           ),
           
-          // Price and Warehouse
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${item.price.toInt()} zł',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+          
         ],
       ),
     );

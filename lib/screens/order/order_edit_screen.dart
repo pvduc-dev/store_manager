@@ -415,9 +415,13 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                 height: 40,
                 child: TextField(
                   controller: _taxRateController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*([.,]\d{0,2})?$')),
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*([.,]\d{0,2})?$'),
+                    ),
                   ],
                   decoration: InputDecoration(
                     isDense: true,
@@ -440,18 +444,24 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildSummaryRow('Tổng tiền trước thuế', '${_netto.toStringAsFixed(2)} zł'),
+          _buildSummaryRow(
+            'Tổng tiền trước thuế',
+            '${_netto.toStringAsFixed(2)} zł',
+          ),
           if ((_taxRate - 1) > 0)
-            _buildSummaryRow('Thuế', '${(_netto * (_taxRate - 1)).toStringAsFixed(2)} zł'),
+            _buildSummaryRow(
+              'Thuế',
+              '${(_netto * (_taxRate - 1)).toStringAsFixed(2)} zł',
+            ),
           if (double.parse(widget.order.shippingTotal) > 0)
             _buildSummaryRow(
-             'Phí vận chuyển',
-             '${(double.tryParse(widget.order.shippingTotal) ?? 0).toStringAsFixed(2)} zł',
+              'Phí vận chuyển',
+              '${(double.tryParse(widget.order.shippingTotal) ?? 0).toStringAsFixed(2)} zł',
             ),
           if (double.parse(widget.order.discountTotal) > 0)
             _buildSummaryRow(
-             'Giảm giá',
-             '-${(double.tryParse(widget.order.discountTotal) ?? 0).toStringAsFixed(2)} zł',
+              'Giảm giá',
+              '-${(double.tryParse(widget.order.discountTotal) ?? 0).toStringAsFixed(2)} zł',
             ),
           const Divider(height: 20, thickness: 1),
           _buildSummaryRow(
