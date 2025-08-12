@@ -190,7 +190,8 @@ class _NewProductScreenState extends State<NewProductScreen> {
                                   fit: BoxFit.fill,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.image_outlined,
@@ -317,10 +318,12 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 //   ),
                 // ),
                 // const SizedBox(height: 24),
-
                 TextFormField(
                   controller: priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+                  keyboardType: TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
                     labelText: 'Giá bán *',
@@ -328,7 +331,9 @@ class _NewProductScreenState extends State<NewProductScreen> {
                     isDense: true,
                   ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -359,7 +364,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
                 TextFormField(
                   controller: khoHangController,
-                  keyboardType: TextInputType.name,
+                  keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
                     labelText: 'Kho hàng',

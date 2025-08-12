@@ -1156,6 +1156,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ?.value ??
         '';
 
+    final packa = product.metaData
+        .where((element) => element.key == 'packa')
+        .firstOrNull
+        ?.value ??
+        '';
+
     return Padding(
       padding: EdgeInsets.all(8),
       child: Column(
@@ -1165,7 +1171,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Container(
             constraints: BoxConstraints(minHeight: 40),
             child: Text(
-              '[${product.id}] ${product.name}',
+              '[${product.id}] ${product.name}  ${packa != '' ? '(${packa})' : ''}',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               maxLines: 2,
 

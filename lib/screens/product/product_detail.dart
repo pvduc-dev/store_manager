@@ -459,7 +459,7 @@ class _ProductDetailState extends State<ProductDetail> {
                       // Kho hang
                       TextFormField(
                         controller: warehouseController,
-                        keyboardType: TextInputType.name,
+                        keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
                           labelText: 'Kho hang',
