@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../models/order.dart';
+import '../../services/pdf_invoice_service.dart';
 import '../../providers/order_provider.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -483,6 +485,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
               ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _onPrintInvoice(order),
+                      icon: const Icon(Icons.print),
+                      label: const Text('In hoá đơn'),
+                    ),
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -612,5 +628,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
         '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _onPrintInvoice(Order order) async {
+    try {
+      final bytes = await PdfInvoiceService.generateInvoicePdf(order: order);
+      if (!mounted) return;
+      final filename = 'invoice_${order.number.isNotEmpty ? order.number : order.id}.pdf';
+
+      // Mở Share Sheet hệ thống: người dùng chọn "Save to Files" để lưu
+      await Printing.sharePdf(bytes: bytes, filename: filename);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể tạo PDF: $e')),
+      );
+    }
   }
 }

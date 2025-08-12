@@ -22,6 +22,11 @@ dependencies:
   dio_cookie_manager: ^3.2.0
   cookie_jar: ^4.0.8
   intl: ^0.20.2
+  pdf: ^3.11.1
+  printing: ^5.13.3
+  share_plus: ^10.0.2
+  path_provider: ^2.1.4
+  file_saver: ^0.2.12
   shared_preferences: ^2.3.3
 dev_dependencies:
   flutter_test:
