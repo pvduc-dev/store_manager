@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +10,7 @@ import '../../providers/order_provider.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
-  
+
   const OrderDetailScreen({super.key, required this.orderId});
 
   @override
@@ -42,10 +43,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             builder: (context, orderProvider, child) {
               final orderId = int.tryParse(widget.orderId);
               if (orderId == null) return const SizedBox.shrink();
-              
+
               final order = orderProvider.getOrderById(orderId);
               if (order == null) return const SizedBox.shrink();
-              
+
               return TextButton(
                 child: const Text(
                   'Sửa',
@@ -66,31 +67,42 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
           if (orderProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final orderId = int.tryParse(widget.orderId);
           if (orderId == null) {
-            return const Center(
-              child: Text('ID đơn hàng không hợp lệ'),
-            );
+            return const Center(child: Text('ID đơn hàng không hợp lệ'));
           }
 
           final order = orderProvider.getOrderById(orderId);
           if (order == null) {
-            return const Center(
-              child: Text('Không tìm thấy đơn hàng'),
-            );
+            return const Center(child: Text('Không tìm thấy đơn hàng'));
           }
-          
-          // Tính tổng tiền trước thuế (subtotal)
-          double subtotal = 0;
-          for (var item in order.lineItems) {
-            subtotal += double.parse(item.subtotal);
-          }
-          
+
+          // Lấy subtotal từ metadata
+          String subtotal =
+              (order.metaData.firstWhere(
+                        (e) => e['key'] == 'subtotal',
+                        orElse: () => {'key': '', 'value': '0'},
+                      )['value'] ??
+                      0)
+                  .toString();
+          String total_tax =
+              (order.metaData.firstWhere(
+                        (e) => e['key'] == 'total_tax',
+                        orElse: () => {'key': '', 'value': '0'},
+                      )['value'] ??
+                      0)
+                  .toString();
+          String total =
+              (order.metaData.firstWhere(
+                        (e) => e['key'] == 'total',
+                        orElse: () => {'key': '', 'value': '0'},
+                      )['value'] ??
+                      0)
+                  .toString();
+
           // Debug: In toàn bộ thông tin đơn hàng
           print('=== DEBUG ORDER DETAILS ===');
           print('Order ID: ${order.id}');
@@ -116,7 +128,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           print('Payment Method Title: ${order.paymentMethodTitle}');
           print('Transaction ID: ${order.transactionId}');
           print('--- FINANCIAL INFO ---');
-          print('Subtotal (calculated): $subtotal');
+          print('Subtotal (from metadata): $subtotal');
           print('Discount Total: ${order.discountTotal}');
           print('Discount Tax: ${order.discountTax}');
           print('Shipping Total: ${order.shippingTotal}');
@@ -248,31 +260,70 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Amount Info
-                            _buildInfoRow('Tổng tiền trước thuế', '', '${subtotal.toInt()}${order.currencySymbol}', Colors.black),
-                            if (double.parse(order.totalTax) > 0)
-                              _buildInfoRow('Thuế', '', '${double.parse(order.totalTax).toInt()}${order.currencySymbol}', Colors.orange),
+                            _buildInfoRow(
+                              'Tổng tiền trước thuế',
+                              '',
+                              '${subtotal}${order.currencySymbol}',
+                              Colors.black,
+                            ),
+                            if (double.parse(total_tax) > 0)
+                              _buildInfoRow(
+                                'Thuế',
+                                '',
+                                '${total_tax}${order.currencySymbol}',
+                                Colors.orange,
+                              ),
                             if (double.parse(order.shippingTotal) > 0)
-                              _buildInfoRow('Phí vận chuyển', '', '${double.parse(order.shippingTotal).toInt()}${order.currencySymbol}', Colors.blue),
-                            if (double.parse(order.discountTotal) > 0)
-                              _buildInfoRow('Giảm giá', '', '-${double.parse(order.discountTotal).toInt()}${order.currencySymbol}', Colors.green),
+                              _buildInfoRow(
+                                'Phí vận chuyển',
+                                '',
+                                '${double.parse(order.shippingTotal).toInt()}${order.currencySymbol}',
+                                Colors.blue,
+                              ),
+
                             const Divider(height: 20, thickness: 1),
-                            _buildInfoRow('Tổng tiền sau thuế', '', '${double.parse(order.total).toInt()}${order.currencySymbol}', Colors.red),
+                            _buildInfoRow(
+                              'Tổng tiền sau thuế',
+                              '',
+                              '${total}${order.currencySymbol}',
+                              Colors.red,
+                            ),
                             const SizedBox(height: 8),
-                            _buildInfoRow('Số sản phẩm', '', '${order.lineItems.length} sản phẩm', Colors.black),
+                            _buildInfoRow(
+                              'Số sản phẩm',
+                              '',
+                              '${order.lineItems.length} sản phẩm',
+                              Colors.black,
+                            ),
                             const SizedBox(height: 8),
-                            _buildInfoRow('Thời gian đặt hàng', '', _formatDateTime(order.dateCreated), Colors.black),
+                            _buildInfoRow(
+                              'Thời gian đặt hàng',
+                              '',
+                              _formatDateTime(order.dateCreated),
+                              Colors.black,
+                            ),
                             if (order.datePaid != null)
-                              _buildInfoRow('Thời gian thanh toán', '', _formatDateTime(order.datePaid!), Colors.green),
+                              _buildInfoRow(
+                                'Thời gian thanh toán',
+                                '',
+                                _formatDateTime(order.datePaid!),
+                                Colors.green,
+                              ),
                             if (order.dateCompleted != null)
-                              _buildInfoRow('Thời gian hoàn thành', '', _formatDateTime(order.dateCompleted!), Colors.green),
+                              _buildInfoRow(
+                                'Thời gian hoàn thành',
+                                '',
+                                _formatDateTime(order.dateCompleted!),
+                                Colors.green,
+                              ),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Customer Information Card
                       Container(
                         width: double.infinity,
@@ -316,33 +367,58 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Customer ID
-                            _buildInfoRow('Mã khách hàng', '', '#${order.customerId}', Colors.blue),
-                            
+                            _buildInfoRow(
+                              'Mã khách hàng',
+                              '',
+                              '#${order.customerId}',
+                              Colors.blue,
+                            ),
+
                             // Customer Name
-                            if (order.billing.firstName.isNotEmpty || order.billing.lastName.isNotEmpty)
-                              _buildInfoRow('Họ và tên', '', '${order.billing.firstName} ${order.billing.lastName}'.trim(), Colors.black),
-                            
+                            if (order.billing.firstName.isNotEmpty ||
+                                order.billing.lastName.isNotEmpty)
+                              _buildInfoRow(
+                                'Họ và tên',
+                                '',
+                                '${order.billing.firstName} ${order.billing.lastName}'
+                                    .trim(),
+                                Colors.black,
+                              ),
+
                             // Company
                             if (order.billing.company.isNotEmpty)
-                              _buildInfoRow('Công ty', '', order.billing.company, Colors.black),
-                            
+                              _buildInfoRow(
+                                'Công ty',
+                                '',
+                                order.billing.company,
+                                Colors.black,
+                              ),
+
                             // Email
                             if (order.billing.email.isNotEmpty)
-                              _buildInfoRow('Email', '', order.billing.email, Colors.black),
-                            
+                              _buildInfoRow(
+                                'Email',
+                                '',
+                                order.billing.email,
+                                Colors.black,
+                              ),
+
                             // Phone
                             if (order.billing.phone.isNotEmpty)
-                              _buildInfoRow('Số điện thoại', '', order.billing.phone, Colors.black),
-                            
-                        
+                              _buildInfoRow(
+                                'Số điện thoại',
+                                '',
+                                order.billing.phone,
+                                Colors.black,
+                              ),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Payment & Shipping Information Card
                       Container(
                         width: double.infinity,
@@ -386,25 +462,48 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Payment Method
                             if (order.paymentMethodTitle.isNotEmpty)
-                              _buildInfoRow('Phương thức thanh toán', '', order.paymentMethodTitle, Colors.black),
-                            
+                              _buildInfoRow(
+                                'Phương thức thanh toán',
+                                '',
+                                order.paymentMethodTitle,
+                                Colors.black,
+                              ),
+
                             // Transaction ID
                             if (order.transactionId.isNotEmpty)
-                              _buildInfoRow('Mã giao dịch', '', order.transactionId, Colors.blue),
-                            
+                              _buildInfoRow(
+                                'Mã giao dịch',
+                                '',
+                                order.transactionId,
+                                Colors.blue,
+                              ),
+
                             // Order Key
                             if (order.orderKey.isNotEmpty)
-                              _buildInfoRow('Mã đơn hàng', '', order.orderKey, Colors.grey),
-                            
+                              _buildInfoRow(
+                                'Mã đơn hàng',
+                                '',
+                                order.orderKey,
+                                Colors.grey,
+                              ),
+
                             // Customer Note
                             if (order.customerNote.isNotEmpty) ...[
                               const SizedBox(height: 12),
-                              _buildInfoRow('Ghi chú khách hàng', '', '', Colors.black),
+                              _buildInfoRow(
+                                'Ghi chú khách hàng',
+                                '',
+                                '',
+                                Colors.black,
+                              ),
                               Padding(
-                                padding: const EdgeInsets.only(left: 16, top: 4),
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  top: 4,
+                                ),
                                 child: Text(
                                   order.customerNote,
                                   style: TextStyle(
@@ -415,15 +514,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 ),
                               ),
                             ],
-                            
+
                             // Additional Order Info
                             if (order.customerIpAddress.isNotEmpty)
-                              _buildInfoRow('IP khách hàng', '', order.customerIpAddress, Colors.grey),
-                            
+                              _buildInfoRow(
+                                'IP khách hàng',
+                                '',
+                                order.customerIpAddress,
+                                Colors.grey,
+                              ),
+
                             // Shipping Address (if different from billing)
-                            if (order.shipping.address1.isNotEmpty || order.shipping.city.isNotEmpty) ...[
+                            if (order.shipping.address1.isNotEmpty ||
+                                order.shipping.city.isNotEmpty) ...[
                               const SizedBox(height: 16),
-                              _buildInfoRow('Địa chỉ giao hàng', '', '', Colors.black),
+                              _buildInfoRow(
+                                'Địa chỉ giao hàng',
+                                '',
+                                '',
+                                Colors.black,
+                              ),
                               if (order.shipping.address1.isNotEmpty)
                                 Container(
                                   width: double.infinity,
@@ -438,7 +548,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 ),
                               if (order.shipping.address2.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    top: 2,
+                                  ),
                                   child: Text(
                                     order.shipping.address2,
                                     style: TextStyle(
@@ -448,9 +561,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     textAlign: TextAlign.right,
                                   ),
                                 ),
-                              if (order.shipping.city.isNotEmpty || order.shipping.state.isNotEmpty || order.shipping.postcode.isNotEmpty)
+                              if (order.shipping.city.isNotEmpty ||
+                                  order.shipping.state.isNotEmpty ||
+                                  order.shipping.postcode.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    top: 2,
+                                  ),
                                   child: Text(
                                     '${order.shipping.city.isNotEmpty ? order.shipping.city : ''}${order.shipping.state.isNotEmpty ? ', ${order.shipping.state}' : ''}${order.shipping.postcode.isNotEmpty ? ' ${order.shipping.postcode}' : ''}',
                                     style: TextStyle(
@@ -462,7 +580,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 ),
                               if (order.shipping.country.isNotEmpty)
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 16, top: 2),
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    top: 2,
+                                  ),
                                   child: Text(
                                     order.shipping.country,
                                     style: TextStyle(
@@ -472,13 +593,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     textAlign: TextAlign.right,
                                   ),
                                 ),
-                            ]
+                            ],
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Product List
                       ...order.lineItems.map((item) => _buildProductCard(item)),
                     ],
@@ -506,7 +627,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String prefix, String value, Color valueColor) {
+  Widget _buildInfoRow(
+    String label,
+    String prefix,
+    String value,
+    Color valueColor,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -516,10 +642,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             width: 140,
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ),
           Expanded(
@@ -528,7 +651,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               style: TextStyle(
                 fontSize: 14,
                 color: valueColor,
-                fontWeight: valueColor == Colors.red ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: valueColor == Colors.red
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
               textAlign: TextAlign.right,
             ),
@@ -569,22 +694,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     child: CachedNetworkImage(
                       imageUrl: item.image!.src,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.image,
-                        color: Colors.grey[400],
-                        size: 30,
+                      placeholder: (context, url) => Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
+                      errorWidget: (context, url, error) =>
+                          Icon(Icons.image, color: Colors.grey[400], size: 30),
                     ),
                   )
-                : Icon(
-                    Icons.image,
-                    color: Colors.grey[400],
-                    size: 30,
-                  ),
+                : Icon(Icons.image, color: Colors.grey[400], size: 30),
           ),
           const SizedBox(width: 12),
-          
+
           // Product Info
           Expanded(
             child: Column(
@@ -607,19 +727,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                'Giá: ${item.price.toInt()} zł',
-                style: const TextStyle(
-                  fontSize: 14,
-                                      fontWeight: FontWeight.w500,
+                  'Giá: ${item.price.toInt()} zł',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
 
-                  color: Colors.red,
+                    color: Colors.red,
+                  ),
                 ),
-              ),
               ],
             ),
           ),
-          
-          
         ],
       ),
     );
@@ -634,15 +752,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     try {
       final bytes = await PdfInvoiceService.generateInvoicePdf(order: order);
       if (!mounted) return;
-      final filename = 'invoice_${order.number.isNotEmpty ? order.number : order.id}.pdf';
+      final filename =
+          'invoice_${order.number.isNotEmpty ? order.number : order.id}.pdf';
 
       // Mở Share Sheet hệ thống: người dùng chọn "Save to Files" để lưu
       await Printing.sharePdf(bytes: bytes, filename: filename);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể tạo PDF: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể tạo PDF: $e')));
     }
   }
 }

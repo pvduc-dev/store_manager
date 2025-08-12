@@ -293,7 +293,7 @@ class _OrderListScreenState extends State<OrderListScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${double.parse(order.total).toInt()} ${order.currencySymbol}',
+                  '${order.metaData.firstWhere((e) => e['key'] == 'total', orElse: () => {'key': '', 'value': '0'})['value']} ${order.currencySymbol}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

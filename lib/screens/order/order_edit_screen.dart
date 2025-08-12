@@ -458,11 +458,6 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               'Phí vận chuyển',
               '${(double.tryParse(widget.order.shippingTotal) ?? 0).toStringAsFixed(2)} zł',
             ),
-          if (double.parse(widget.order.discountTotal) > 0)
-            _buildSummaryRow(
-              'Giảm giá',
-              '-${(double.tryParse(widget.order.discountTotal) ?? 0).toStringAsFixed(2)} zł',
-            ),
           const Divider(height: 20, thickness: 1),
           _buildSummaryRow(
             'Tổng tiền sau thuế',
@@ -713,9 +708,14 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       'customer_note': _notesController.text.isNotEmpty
           ? _notesController.text
           : '',
-      'total': _brutto.toStringAsFixed(2),
-      'subtotal': _netto.toStringAsFixed(2),
-      'total_tax': (_netto * (_taxRate - 1)).toStringAsFixed(2),
+      'meta_data': [
+        {'key': 'total', 'value': _brutto.toStringAsFixed(2)},
+        {'key': 'subtotal', 'value': _netto.toStringAsFixed(2)},
+        {
+          'key': 'total_tax',
+          'value': (_netto * (_taxRate - 1)).toStringAsFixed(2),
+        },
+      ],
     };
 
     print(

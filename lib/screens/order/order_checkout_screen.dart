@@ -587,9 +587,12 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
           ? _notesController.text
           : '',
       'status': 'pending',
-      'total': _brutto.toStringAsFixed(2),
-      'subtotal': _netto.toStringAsFixed(2),
-      'total_tax': (_brutto - _netto).toStringAsFixed(2),
+
+      'meta_data': [
+        {'key': 'total', 'value': _brutto.toStringAsFixed(2)},
+        {'key': 'subtotal', 'value': _netto.toStringAsFixed(2)},
+        {'key': 'total_tax', 'value': (_brutto - _netto).toStringAsFixed(2)},
+      ],
     };
     print(
       'OrderCheckoutScreen: Đang chuẩn bị dữ liệu đơn hàng: ${orderData.toString()}',
