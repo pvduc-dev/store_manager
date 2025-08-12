@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/cart.dart';
-import '../models/product.dart';
+import '../models/product.dart' as product_model;
 import '../services/cart_service.dart';
 
 class CartProvider extends ChangeNotifier {
@@ -54,7 +54,7 @@ class CartProvider extends ChangeNotifier {
   }
 
   /// Thêm sản phẩm vào giỏ hàng
-  Future<void> addToCart(Product product, {int quantity = 1}) async {
+  Future<void> addToCart(product_model.Product product, {int quantity = 1}) async {
     print('=== DEBUG CART PROVIDER ADD TO CART ===');
     print('Product ID: ${product.id}');
     print('Product Name: ${product.name}');
@@ -150,6 +150,38 @@ class CartProvider extends ChangeNotifier {
   /// Lấy số sản phẩm trong giỏ hàng
   int getCartItemCount() {
     return _cart.items.length;
+  }
+
+  /// Kiểm tra xem có sản phẩm nào có giá thay đổi không
+  bool get hasPriceChanges {
+    return _cart.items.any((item) {
+      final priceMeta = item.product.metaData.firstWhere(
+        (meta) => meta.key == 'custom_price',
+        orElse: () => product_model.MetaData(key: 'custom_price', value: '0'),
+      );
+      
+      if (priceMeta.value.isNotEmpty) {
+        final originalPrice = double.tryParse(priceMeta.value) ?? 0.0;
+        return (item.price - originalPrice).abs() > 0.01;
+      }
+      return false;
+    });
+  }
+
+  /// Lấy danh sách sản phẩm có giá thay đổi
+  List<CartItem> get itemsWithPriceChanges {
+    return _cart.items.where((item) {
+      final priceMeta = item.product.metaData.firstWhere(
+        (meta) => meta.key == 'custom_price',
+        orElse: () => product_model.MetaData(key: 'custom_price', value: '0'),
+      );
+      
+      if (priceMeta.value.isNotEmpty) {
+        final originalPrice = double.tryParse(priceMeta.value) ?? 0.0;
+        return (item.price - originalPrice).abs() > 0.01;
+      }
+      return false;
+    }).toList();
   }
 
   // Private methods để cập nhật state
