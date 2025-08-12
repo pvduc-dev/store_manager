@@ -575,18 +575,21 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     if (cart == null) {
       throw Exception('Giỏ hàng trống');
     }
-
+    
     final customerData = _buildCustomerData();
     final lineItems = _buildLineItems(cart);
-
-    return {
+    final shippingLines = _buildShippingLines(cart);
+    final _netto = _calculateNetto(cart);
+    final _brutto = _calculateBrutto(cart);
+    
+    final orderData = {
       'payment_method': 'cod',
       'payment_method_title': 'Thanh toán khi nhận hàng',
       'set_paid': false,
       'billing': customerData,
       'shipping': customerData,
       'line_items': lineItems,
-      'shipping_lines': _buildShippingLines(cart),
+      'shipping_lines': shippingLines,
       'fee_lines': [],
       'coupon_lines': [],
       'customer_note': _notesController.text.isNotEmpty ? _notesController.text : '',
@@ -595,6 +598,8 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
       'subtotal': _netto.toStringAsFixed(2),
       'total_tax': (_brutto - _netto).toStringAsFixed(2),
     };
+
+    return orderData;
   }
 
   Map<String, dynamic> _buildCustomerData() {
@@ -610,11 +615,23 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   }
 
   List<Map<String, dynamic>> _buildLineItems(Cart cart) {
-    return cart.items.map((item) => {
-      'product_id': item.id,
-      'quantity': item.quantity,
-      'total': item.totals.lineTotal,
+    final lineItems = cart.items.map((item) {
+      // Chuyển đổi giá từ minor units (cents) sang đơn vị thực tế
+      final int totalInCents = int.tryParse(item.totals.lineTotal) ?? 0;
+      final double totalInUnits = totalInCents / 100; // Chia cho 100
+      
+      // Tính giá đơn vị (giá mỗi sản phẩm)
+      final double unitPrice = item.quantity > 0 ? totalInUnits / item.quantity : 0;
+      
+      return {
+        'product_id': item.id,
+        'quantity': item.quantity,
+        'total': totalInUnits.toStringAsFixed(2), // Giá tổng đã chia 100
+        'unit_price': unitPrice.toStringAsFixed(2), // Giá mỗi sản phẩm
+      };
     }).toList();
+    
+    return lineItems;
   }
 
   List<Map<String, dynamic>> _buildShippingLines(Cart cart) {
@@ -627,21 +644,25 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
     ];
   }
 
+  double _calculateNetto(Cart cart) {
+    return double.tryParse(cart.totals.totalPrice.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+  }
+
+  double _calculateBrutto(Cart cart) {
+    final netto = _calculateNetto(cart);
+    return netto * 1.23; // Ví dụ: 200000 * 1.23 = 246000
+  }
+
   Future<dynamic> _createOrder(Map<String, dynamic> orderData) async {
     if (!mounted) return null;
     
     try {
-      print('OrderCheckoutScreen: Bắt đầu tạo đơn hàng...');
       final orderProvider = context.read<OrderProvider>();
       
-      print('OrderCheckoutScreen: Gọi orderProvider.createOrder...');
       final result = await orderProvider.createOrder(orderData);
       
-      print('OrderCheckoutScreen: Kết quả tạo đơn hàng: $result');
       return result;
     } catch (e) {
-      print('OrderCheckoutScreen: Lỗi khi tạo đơn hàng: $e');
-      print('OrderCheckoutScreen: Stack trace: ${StackTrace.current}');
       debugPrint('Error creating order: $e');
       return null;
     }
