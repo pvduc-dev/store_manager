@@ -65,6 +65,14 @@ class OfflineCart extends HiveObject {
     }
   }
 
+  void updateItemPrice(int productId, String newPrice) {
+    final index = items.indexWhere((item) => item.productId == productId);
+    if (index != -1) {
+      items[index] = items[index].copyWith(price: newPrice);
+      _updateTotals();
+    }
+  }
+
   void removeItem(int productId) {
     items.removeWhere((item) => item.productId == productId);
     _updateTotals();

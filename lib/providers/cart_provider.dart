@@ -72,26 +72,11 @@ class CartProvider extends ChangeNotifier {
 
   Future<void> updateItemPrice(int productId, String newPrice) async {
     try {
-      final currentItem = offlineCart?.getItem(productId);
-      if (currentItem != null) {
-        // Tạo item mới với giá mới
-        final updatedItem = OfflineCartItem(
-          productId: productId,
-          name: currentItem.name,
-          price: newPrice,
-          quantity: currentItem.quantity,
-          imageUrl: currentItem.imageUrl,
-          description: currentItem.description,
-          addedAt: currentItem.addedAt,
-        );
-
-        // Chỉ cập nhật qua service để tránh duplicate
-        await OfflineCartService.removeItem(productId);
-        await OfflineCartService.addItem(updatedItem);
-        
-        // Sau đó load lại từ storage để đồng bộ state
-        await getCart();
-      }
+      // Cập nhật giá trực tiếp qua service để giữ nguyên thứ tự
+      await OfflineCartService.updateItemPrice(productId, newPrice);
+      
+      // Sau đó load lại từ storage để đồng bộ state
+      await getCart();
     } catch (e) {
       print('Error updating item price: $e');
       // Nếu lỗi thì load lại từ storage

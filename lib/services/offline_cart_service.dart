@@ -53,6 +53,12 @@ class OfflineCartService {
     await saveCart(cart);
   }
 
+  static Future<void> updateItemPrice(int productId, String newPrice) async {
+    final cart = await getCart();
+    cart.updateItemPrice(productId, newPrice);
+    await saveCart(cart);
+  }
+
   static Future<void> removeItem(int productId) async {
     final cart = await getCart();
     cart.removeItem(productId);

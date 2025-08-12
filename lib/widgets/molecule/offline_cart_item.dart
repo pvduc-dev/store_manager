@@ -23,33 +23,103 @@ class OfflineCartItemWidget extends StatefulWidget {
 class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
   late TextEditingController _quantityController;
   late TextEditingController _priceController;
+  late FocusNode _priceFocusNode;
+  late FocusNode _quantityFocusNode;
+  
+  // Lưu giá trị gốc để reset khi validation thất bại
+  late String _originalPrice;
+  late int _originalQuantity;
 
   @override
   void initState() {
     super.initState();
+    _originalPrice = widget.item.price;
+    _originalQuantity = widget.item.quantity;
+    
     _quantityController = TextEditingController(text: widget.item.quantity.toString());
     _priceController = TextEditingController(text: widget.item.price.toString());
+    
+    _priceFocusNode = FocusNode();
+    _quantityFocusNode = FocusNode();
+    
+    // Lắng nghe khi mất focus để validate
+    _priceFocusNode.addListener(_onPriceFocusChanged);
+    _quantityFocusNode.addListener(_onQuantityFocusChanged);
   }
 
   @override
   void didUpdateWidget(OfflineCartItemWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Cập nhật controller khi widget.item thay đổi
+    // Cập nhật controller và original values khi widget.item thay đổi
     if (oldWidget.item.quantity != widget.item.quantity) {
+      _originalQuantity = widget.item.quantity;
       _quantityController.text = widget.item.quantity.toString();
     }
     
     if (oldWidget.item.price != widget.item.price) {
+      _originalPrice = widget.item.price;
       _priceController.text = widget.item.price.toString();
     }
   }
 
   @override
   void dispose() {
+    _priceFocusNode.removeListener(_onPriceFocusChanged);
+    _quantityFocusNode.removeListener(_onQuantityFocusChanged);
+    _priceFocusNode.dispose();
+    _quantityFocusNode.dispose();
     _quantityController.dispose();
     _priceController.dispose();
     super.dispose();
+  }
+
+  void _onPriceFocusChanged() {
+    if (!_priceFocusNode.hasFocus) {
+      // Khi mất focus, validate giá trị
+      final priceText = _priceController.text.trim();
+      final price = double.tryParse(priceText);
+      
+      if (price == null || price <= 0) {
+        // Giá trị không hợp lệ, reset về giá gốc
+        _priceController.text = _originalPrice;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Giá không hợp lệ. Đã reset về giá gốc.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Giá trị hợp lệ, cập nhật original value và gọi callback
+        _originalPrice = priceText;
+        widget.onPriceChanged(priceText);
+      }
+    }
+  }
+
+  void _onQuantityFocusChanged() {
+    if (!_quantityFocusNode.hasFocus) {
+      // Khi mất focus, validate số lượng
+      final quantityText = _quantityController.text.trim();
+      final quantity = int.tryParse(quantityText);
+      
+      if (quantity == null || quantity <= 0) {
+        // Số lượng không hợp lệ, reset về số lượng gốc
+        _quantityController.text = _originalQuantity.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Số lượng không hợp lệ. Đã reset về số lượng gốc.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Số lượng hợp lệ, cập nhật original value và gọi callback
+        _originalQuantity = quantity;
+        widget.onQuantityChanged(quantity);
+      }
+    }
   }
 
   @override
@@ -171,6 +241,7 @@ class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
                                 if (currentQuantity > 1) {
                                   final newQuantity = currentQuantity - 1;
                                   _quantityController.text = newQuantity.toString();
+                                  _originalQuantity = newQuantity; // Cập nhật giá trị gốc
                                   widget.onQuantityChanged(newQuantity);
                                 }
                               },
@@ -185,6 +256,7 @@ class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
                               height: 40,
                               child: TextField(
                                 controller: _quantityController,
+                                focusNode: _quantityFocusNode,
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.center,
                                 decoration: InputDecoration(
@@ -194,12 +266,7 @@ class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   isDense: true,
                                 ),
-                                onChanged: (value) {
-                                  final quantity = int.tryParse(value);
-                                  if (quantity != null && quantity > 0) {
-                                    widget.onQuantityChanged(quantity);
-                                  }
-                                },
+                                // Bỏ onChanged, chỉ validate khi mất focus
                               ),
                             ),
                           ),
@@ -215,6 +282,7 @@ class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
                                 final currentQuantity = int.tryParse(_quantityController.text) ?? 0;
                                 final newQuantity = currentQuantity + 1;
                                 _quantityController.text = newQuantity.toString();
+                                _originalQuantity = newQuantity; // Cập nhật giá trị gốc
                                 widget.onQuantityChanged(newQuantity);
                               },
                               icon: Icon(Icons.add, size: 16),
@@ -247,17 +315,13 @@ class _OfflineCartItemWidgetState extends State<OfflineCartItemWidget> {
                         height: 40,
                         child: TextField(
                           controller: _priceController,
+                          focusNode: _priceFocusNode,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
-                          onChanged: (value) {
-                            final price = double.tryParse(value);
-                            if (price != null) {
-                              widget.onPriceChanged(value);
-                            }
-                          },
+                          // Bỏ onChanged, chỉ validate khi mất focus
                         ),
                       ),
                     ],
