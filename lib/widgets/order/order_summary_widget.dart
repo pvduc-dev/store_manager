@@ -1,20 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:store_manager/models/cart.dart';
-
-String _formatMoneyFromTotals(String raw, CartTotals totals) {
-  final minor = totals.currencyMinorUnit;
-  final intVal = int.tryParse(raw) ?? 0;
-  final divisor = math.pow(10, minor);
-  final value = intVal / divisor;
-  final amount = value.toStringAsFixed(minor);
-  final prefix = totals.currencyPrefix;
-  final suffix = totals.currencySuffix;
-  final symbol = totals.currencySymbol;
-  if (prefix.isNotEmpty) return '$prefix$amount';
-  if (suffix.isNotEmpty) return '$amount$suffix';
-  return symbol.isNotEmpty ? '$amount $symbol' : amount;
-}
 
 class OrderSummaryWidget extends StatefulWidget {
   final Cart cart;
@@ -38,11 +23,8 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
   @override
   void initState() {
     super.initState();
-    // Parse total price to get initial values in minor units
-    final totals = widget.cart.totals;
-    final minor = totals.currencyMinorUnit;
-    final intVal = int.tryParse(totals.totalPrice) ?? 0;
-    _netto = (intVal / math.pow(10, minor)).toDouble();
+    // Sử dụng total từ model Cart mới
+    _netto = widget.cart.total;
 
     _coefficientController = TextEditingController(text: '1.23');
     _calculateBrutto(notifyParent: false);
@@ -79,7 +61,6 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final totals = widget.cart.totals;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,25 +83,25 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
           ),
           child: Column(
             children: [
-              _buildSummaryRow('Tổng số phụ', _formatMoneyFromTotals(totals.totalItems, totals)),
+              _buildSummaryRow('Tổng số sản phẩm', '${widget.cart.itemCount} sản phẩm'),
               const SizedBox(height: 8),
-              if (totals.totalTax.isNotEmpty && totals.totalTax != '0') ...[
-                _buildSummaryRow('Thuế', _formatMoneyFromTotals(totals.totalTax, totals)),
+              if (widget.cart.discount > 0) ...[
+                _buildSummaryRow('Giảm giá', '-${widget.cart.discount.toStringAsFixed(2)} zł'),
                 const SizedBox(height: 8),
               ],
-              if (totals.totalShipping != null && totals.totalShipping!.isNotEmpty) ...[
-                _buildSummaryRow('Phí vận chuyển', _formatMoneyFromTotals(totals.totalShipping!, totals)),
-                const SizedBox(height: 8),
-              ],
-              _buildSummaryRow('Tổng cộng', _formatMoneyFromTotals(totals.totalPrice, totals), isTotal: true),
+              _buildSummaryRow('Tổng tiền hàng', '${widget.cart.subtotal.toStringAsFixed(2)} zł'),
+              const SizedBox(height: 8),
+              _buildSummaryRow('Thuế', '${widget.cart.tax.toStringAsFixed(2)} zł'),
+              const SizedBox(height: 8),
+              _buildSummaryRow('Tổng cộng', '${widget.cart.total.toStringAsFixed(2)} zł', isTotal: true),
               const SizedBox(height: 16),
               Container(height: 1, color: Colors.grey.shade300),
               const SizedBox(height: 16),
               _buildEditableRow('Hệ số', _coefficientController, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
               const SizedBox(height: 8),
-              _buildSummaryRow('Netto', '${_netto.toStringAsFixed(totals.currencyMinorUnit)} ${totals.currencySymbol}'),
+              _buildSummaryRow('Netto', '${_netto.toStringAsFixed(2)} zł'),
               const SizedBox(height: 8),
-              _buildSummaryRow('Brutto', '${_brutto.toStringAsFixed(totals.currencyMinorUnit)} ${totals.currencySymbol}', isTotal: true),
+              _buildSummaryRow('Brutto', '${_brutto.toStringAsFixed(2)} zł', isTotal: true),
             ],
           ),
         ),

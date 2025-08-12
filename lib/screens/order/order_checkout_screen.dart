@@ -65,7 +65,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   void _loadInitialData() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<CartProvider>().getCart();
+        context.read<CartProvider>().refresh();
       }
     });
   }
@@ -127,13 +127,7 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
   }
 
   double _extractTotalPrice(Cart cart) {
-    try {
-      return double.tryParse(
-        cart.totals.totalPrice.replaceAll(RegExp(r'[^\d.]'), '')
-      ) ?? 0.0;
-    } catch (e) {
-      return 0.0;
-    }
+    return cart.total;
   }
 
   @override
@@ -158,15 +152,15 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (cartProvider.cart == null || cartProvider.isEmpty) {
+          if (cartProvider.isEmpty) {
             return _buildEmptyCartMessage();
           }
 
-          _initializeOrderValuesIfNeeded(cartProvider.cart!);
+          _initializeOrderValuesIfNeeded(cartProvider.cart);
 
           return Column(
             children: [
-              Expanded(child: _buildForm(cartProvider.cart!)),
+              Expanded(child: _buildForm(cartProvider.cart)),
               _buildContinueButton(cartProvider),
             ],
           );
@@ -616,18 +610,17 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
 
   List<Map<String, dynamic>> _buildLineItems(Cart cart) {
     final lineItems = cart.items.map((item) {
-      // Chuyển đổi giá từ minor units (cents) sang đơn vị thực tế
-      final int totalInCents = int.tryParse(item.totals.lineTotal) ?? 0;
-      final double totalInUnits = totalInCents / 100; // Chia cho 100
+      // Sử dụng totalPrice từ model CartItem mới
+      final double totalPrice = item.totalPrice;
       
       // Tính giá đơn vị (giá mỗi sản phẩm)
-      final double unitPrice = item.quantity > 0 ? totalInUnits / item.quantity : 0;
+      final double unitPrice = item.quantity > 0 ? totalPrice / item.quantity : 0;
       
       return {
-        'product_id': item.id,
+        'product_id': item.product.id,
         'quantity': item.quantity,
-        'total': totalInUnits.toStringAsFixed(2), // Giá tổng đã chia 100
-        'unit_price': unitPrice.toStringAsFixed(2), // Giá mỗi sản phẩm
+        'total': totalPrice.toStringAsFixed(2),
+        'unit_price': unitPrice.toStringAsFixed(2),
       };
     }).toList();
     
@@ -639,13 +632,13 @@ class _OrderCheckoutScreenState extends State<OrderCheckoutScreen> {
       {
         'method_id': 'flat_rate',
         'method_title': 'Phí vận chuyển',
-        'total': cart.totals.totalShipping ?? '0',
+        'total': '0', // Không có phí vận chuyển trong model mới
       }
     ];
   }
 
   double _calculateNetto(Cart cart) {
-    return double.tryParse(cart.totals.totalPrice.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return cart.total;
   }
 
   double _calculateBrutto(Cart cart) {

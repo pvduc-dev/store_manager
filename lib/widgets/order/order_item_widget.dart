@@ -1,20 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:store_manager/models/cart.dart';
-
-String _formatMoneyFromTotals(String raw, ItemTotals totals) {
-  final minor = totals.currencyMinorUnit;
-  final intVal = int.tryParse(raw) ?? 0;
-  final divisor = math.pow(10, minor);
-  final value = intVal / divisor;
-  final amount = value.toStringAsFixed(minor);
-  final prefix = totals.currencyPrefix;
-  final suffix = totals.currencySuffix;
-  final symbol = totals.currencySymbol;
-  if (prefix.isNotEmpty) return '$prefix$amount';
-  if (suffix.isNotEmpty) return '$amount$suffix';
-  return symbol.isNotEmpty ? '$amount $symbol' : amount;
-}
 
 class OrderItemWidget extends StatelessWidget {
   final CartItem item;
@@ -26,7 +11,7 @@ class OrderItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = item.images.isNotEmpty ? item.images.first.src : '';
+    final imageUrl = item.product.images.isNotEmpty ? item.product.images.first.src ?? '' : '';
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -81,7 +66,7 @@ class OrderItemWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.name,
+                  item.product.name,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -96,10 +81,10 @@ class OrderItemWidget extends StatelessWidget {
                     color: Colors.grey[600],
                   ),
                 ),
-                if (item.sku.isNotEmpty) ...[
+                if (item.product.skuFromMeta != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'SKU: ${item.sku}',
+                    'SKU: ${item.product.skuFromMeta}',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey[500],
@@ -112,7 +97,7 @@ class OrderItemWidget extends StatelessWidget {
           
           // Price
           Text(
-            _formatMoneyFromTotals(item.totals.lineTotal, item.totals),
+            '${item.totalPrice.toStringAsFixed(2)} zł',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
