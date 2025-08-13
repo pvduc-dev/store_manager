@@ -91,6 +91,47 @@ class OrderItemWidget extends StatelessWidget {
                     ),
                   ),
                 ],
+                // Hiển thị categories nếu có
+                if (item.product.categories.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: item.product.categories.take(2).map((category) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.3),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Text(
+                          category.name,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  // Hiển thị dấu "..." nếu có nhiều hơn 2 categories
+                  if (item.product.categories.length > 2)
+                    Text(
+                      '...',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
               ],
             ),
           ),

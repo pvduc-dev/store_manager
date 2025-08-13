@@ -21,9 +21,23 @@ class ProductService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
-        return data
-            .map((json) => Product.fromJson(json as Map<String, dynamic>))
-            .toList();
+        final List<Product> products = [];
+        
+        for (final item in data) {
+          try {
+            if (item is Map<String, dynamic>) {
+              final product = Product.fromJson(item);
+              products.add(product);
+            }
+          } catch (e) {
+            print('Error parsing product: $e');
+            print('Problematic data: $item');
+            // Bỏ qua sản phẩm có lỗi và tiếp tục với sản phẩm khác
+            continue;
+          }
+        }
+        
+        return products;
       } else {
         print('Error fetching products: ${response.statusCode}');
         return [];
@@ -48,9 +62,23 @@ class ProductService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
-        return data
-            .map((json) => Product.fromJson(json as Map<String, dynamic>))
-            .toList();
+        final List<Product> products = [];
+        
+        for (final item in data) {
+          try {
+            if (item is Map<String, dynamic>) {
+              final product = Product.fromJson(item);
+              products.add(product);
+            }
+          } catch (e) {
+            print('Error parsing product during search: $e');
+            print('Problematic data: $item');
+            // Bỏ qua sản phẩm có lỗi và tiếp tục với sản phẩm khác
+            continue;
+          }
+        }
+        
+        return products;
       } else {
         print('Error searching products: ${response.statusCode}');
         return [];
@@ -94,6 +122,14 @@ class ProductService {
 
   static Future<Product?> createProduct(Map<String, dynamic> data) async {
     try {
+      // Log dữ liệu trước khi gửi API để debug
+      print('ProductService: Creating product with data:');
+      print('ProductService: - Name: ${data['name']}');
+      print('ProductService: - Price: ${data['price']}');
+      print('ProductService: - Categories: ${data['categories']}');
+      print('ProductService: - Meta data: ${data['meta_data']}');
+      print('ProductService: - Images: ${data['images']}');
+
       final response = await Dio().post(
         '$baseUrl/products',
         options: Options(
@@ -106,9 +142,11 @@ class ProductService {
       );
 
       if (response.statusCode == 201) {
+        print('ProductService: Product created successfully with ID: ${response.data['id']}');
         return Product.fromJson(response.data);
       } else {
         print('Error creating product: ${response.statusCode}');
+        print('Error response: ${response.data}');
         return null;
       }
     } catch (e) {
@@ -177,7 +215,13 @@ class ProductService {
       );
 
       if (response.statusCode == 200) {
-        return Product.fromJson(response.data);
+        try {
+          return Product.fromJson(response.data);
+        } catch (e) {
+          print('Error parsing product by ID: $e');
+          print('Problematic data: ${response.data}');
+          return null;
+        }
       } else {
         print('Error fetching product by ID: ${response.statusCode}');
         return null;

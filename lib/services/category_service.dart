@@ -11,9 +11,9 @@ class CategoryService {
   static Future<List<Category>> getCategories() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/products/categories?per_page=100'),
+        Uri.parse('$baseUrl/products/categories'),
         headers: {
-          'Authorization': 'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('$consumerKey:$consumerSecret'))}',
           'Content-Type': 'application/json',
         },
       );

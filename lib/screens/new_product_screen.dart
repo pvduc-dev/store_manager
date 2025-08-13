@@ -33,6 +33,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
   late TextEditingController khoHangController;
   
   product_category.Category? selectedCategory; // Danh mục được chọn
+  List<product_category.Category> selectedCategories = []; // Danh sách danh mục được chọn
 
   @override
   void initState() {
@@ -46,8 +47,20 @@ class _NewProductScreenState extends State<NewProductScreen> {
     
     // Lấy danh sách danh mục khi khởi tạo
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CategoryProvider>().fetchCategories();
+      _loadCategories();
     });
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categoryProvider = context.read<CategoryProvider>();
+      
+      // Chỉ load từ cache, không gọi API
+      await categoryProvider.loadCategoriesFromCache();
+      
+    } catch (e) {
+      // Lỗi khi load categories
+    }
   }
 
   @override
@@ -76,10 +89,36 @@ class _NewProductScreenState extends State<NewProductScreen> {
       return;
     }
 
+    // Kiểm tra xem có chọn ít nhất một danh mục không
+    if (selectedCategory == null && selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn ít nhất một danh mục cho sản phẩm'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     try {
       setState(() {
         isSaving = true;
       });
+
+      // Tạo danh sách categories từ cả selectedCategory (để tương thích ngược) và selectedCategories
+      List<Map<String, dynamic>> categories = [];
+      
+      // Thêm selectedCategory nếu có (để tương thích ngược)
+      if (selectedCategory != null) {
+        categories.add({'id': selectedCategory!.id});
+      }
+      
+      // Thêm tất cả selectedCategories
+      for (var category in selectedCategories) {
+        if (!categories.any((c) => c['id'] == category.id)) {
+          categories.add({'id': category.id});
+        }
+      }
 
       final productData = {
         'name': nameController.text.trim(),
@@ -88,9 +127,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
         'price': priceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
-        'categories': selectedCategory != null ? [
-          {'id': selectedCategory!.id}
-        ] : [],
+        'categories': categories,
         'meta_data': [
           {'key': 'paczka', 'value': paczkaController.text.trim()},
           {'key': 'karton', 'value': kartonController.text.trim()},
@@ -104,6 +141,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
             : [],
       };
 
+      print('Creating product with categories: $categories');
       await context.read<ProductProvider>().addProduct(productData);
 
       if (mounted) {
@@ -319,41 +357,9 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Dropdown chọn danh mục sản phẩm
+                // Dropdown chọn danh mục sản phẩm (để tương thích ngược)
                 Consumer<CategoryProvider>(
                   builder: (context, categoryProvider, child) {
-                    if (categoryProvider.isLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    if (categoryProvider.error != null) {
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.red),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.error, color: Colors.red),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Lỗi: ${categoryProvider.error}',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => categoryProvider.fetchCategories(),
-                              child: Text('Thử lại'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
                     if (categoryProvider.categories.isEmpty) {
                       return Container(
                         padding: const EdgeInsets.all(16),
@@ -376,30 +382,37 @@ class _NewProductScreenState extends State<NewProductScreen> {
                       );
                     }
 
-                    return DropdownButtonFormField<product_category.Category>(
-                      value: selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Danh mục sản phẩm',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      hint: const Text('Chọn danh mục'),
-                      items: categoryProvider.categories.map((product_category.Category category) {
-                        return DropdownMenuItem<product_category.Category>(
-                          value: category,
-                          child: Text(category.name),
-                        );
-                      }).toList(),
-                      onChanged: (product_category.Category? newValue) {
-                        setState(() {
-                          selectedCategory = newValue;
-                        });
-                      },
-                      validator: (value) {
-                        // Có thể thêm validation nếu cần
-                        return null;
-                      },
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DropdownButtonFormField<product_category.Category>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'Chọn danh mục chính',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            prefixIcon: Icon(Icons.category),
+                          ),
+                          hint: const Text('Chọn danh mục chính'),
+                          items: categoryProvider.categories.map((product_category.Category category) {
+                            return DropdownMenuItem<product_category.Category>(
+                              value: category,
+                              child: Text(category.name),
+                            );
+                          }).toList(),
+                          onChanged: (product_category.Category? newValue) {
+                            setState(() {
+                              selectedCategory = newValue;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Vui lòng chọn danh mục chính';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                     );
                   },
                 ),

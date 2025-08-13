@@ -197,11 +197,21 @@ class ProductProvider extends ChangeNotifier {
   }
 
   addProduct(Map<String, dynamic> data) async {
-    final product = await ProductService.createProduct(data);
-    if (product != null) {
-      _products.insert(0, product);
-      _productsMap[product.id] = product;
-      notifyListeners();
+    try {
+      print('ProductProvider: Adding product with categories: ${data['categories']}');
+      
+      final product = await ProductService.createProduct(data);
+      if (product != null) {
+        print('ProductProvider: Product added successfully with ID: ${product.id}');
+        _products.insert(0, product);
+        _productsMap[product.id] = product;
+        notifyListeners();
+      } else {
+        print('ProductProvider: Failed to add product');
+      }
+    } catch (e) {
+      print('ProductProvider: Error adding product: $e');
+      rethrow;
     }
   }
 

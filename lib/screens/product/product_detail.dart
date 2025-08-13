@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:store_manager/models/product.dart';
 import 'package:store_manager/providers/product_provider.dart';
+import 'package:store_manager/providers/category_provider.dart';
+import 'package:store_manager/models/category.dart' as product_category;
 import 'package:store_manager/services/product_service.dart';
 
 class ProductDetail extends StatefulWidget {
@@ -35,6 +37,9 @@ class _ProductDetailState extends State<ProductDetail> {
   late TextEditingController paczkaController;
   late TextEditingController kartonController;
   late TextEditingController warehouseController;
+  
+  ProductCategory? selectedCategory; // Danh mục được chọn
+  List<ProductCategory> selectedCategories = []; // Danh sách danh mục được chọn
 
   @override
   void initState() {
@@ -46,6 +51,11 @@ class _ProductDetailState extends State<ProductDetail> {
     kartonController = TextEditingController();
     warehouseController = TextEditingController();
     _loadProduct();
+    
+    // Lấy danh sách danh mục khi khởi tạo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCategories();
+    });
   }
 
   @override
@@ -57,6 +67,18 @@ class _ProductDetailState extends State<ProductDetail> {
     kartonController.dispose();
     warehouseController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categoryProvider = context.read<CategoryProvider>();
+      
+      // Chỉ load từ cache, không gọi API
+      await categoryProvider.loadCategoriesFromCache();
+      
+    } catch (e) {
+      // Lỗi khi load categories
+    }
   }
 
   void _loadProduct() {
@@ -98,6 +120,12 @@ class _ProductDetailState extends State<ProductDetail> {
             orElse: () => MetaData(key: 'kho_hang', value: ''),
           )
           .value;
+      
+      // Set selected categories from product
+      if (loadedProduct.categories.isNotEmpty) {
+        selectedCategories = List.from(loadedProduct.categories);
+        // Không set selectedCategory ngay lập tức, sẽ set sau khi load categories
+      }
     }
   }
 
@@ -116,10 +144,36 @@ class _ProductDetailState extends State<ProductDetail> {
       return;
     }
 
+    // Kiểm tra xem có chọn ít nhất một danh mục không
+    if (selectedCategory == null && selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn ít nhất một danh mục cho sản phẩm'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     try {
       setState(() {
         isSaving = true;
       });
+
+      // Tạo danh sách categories từ cả selectedCategory (để tương thích ngược) và selectedCategories
+      List<Map<String, dynamic>> categories = [];
+      
+      // Thêm selectedCategory nếu có (để tương thích ngược)
+      if (selectedCategory != null) {
+        categories.add({'id': selectedCategory!.id});
+      }
+      
+      // Thêm tất cả selectedCategories
+      for (var category in selectedCategories) {
+        if (!categories.any((c) => c['id'] == category.id)) {
+          categories.add({'id': category.id});
+        }
+      }
 
       final productData = {
         'id': product!.id,
@@ -129,6 +183,7 @@ class _ProductDetailState extends State<ProductDetail> {
         'price': customPriceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
+        'categories': categories,
         'meta_data': [
           {'key': 'paczka', 'value': paczkaController.text.trim()},
           {'key': 'karton', 'value': kartonController.text.trim()},
@@ -142,6 +197,7 @@ class _ProductDetailState extends State<ProductDetail> {
             : product!.images.map((e) => {'id': e.id}).toList(),
       };
 
+      print('Updating product with categories: $categories');
       await context.read<ProductProvider>().updateProduct(productData);
 
       if (mounted) {
@@ -395,6 +451,83 @@ class _ProductDetailState extends State<ProductDetail> {
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // Dropdown chọn danh mục sản phẩm
+                      Consumer<CategoryProvider>(
+                        builder: (context, categoryProvider, child) {
+                          if (categoryProvider.categories.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info, color: Colors.grey),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Không có danh mục nào',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              DropdownButtonFormField<product_category.Category>(
+                                value: selectedCategories.isNotEmpty && categoryProvider.categories.isNotEmpty
+                                    ? categoryProvider.categories.where(
+                                        (cat) => cat.id == selectedCategories.first.id,
+                                      ).firstOrNull
+                                    : null,
+                                decoration: const InputDecoration(
+                                  labelText: 'Chọn danh mục chính',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                  prefixIcon: Icon(Icons.category),
+                                ),
+                                hint: const Text('Chọn danh mục chính'),
+                                items: categoryProvider.categories.map((product_category.Category category) {
+                                  return DropdownMenuItem<product_category.Category>(
+                                    value: category,
+                                    child: Text(category.name),
+                                  );
+                                }).toList(),
+                                onChanged: (product_category.Category? newValue) {
+                                  setState(() {
+                                    if (newValue != null) {
+                                      selectedCategory = ProductCategory(
+                                        id: newValue.id,
+                                        name: newValue.name,
+                                        slug: newValue.slug,
+                                      );
+                                      selectedCategories = [selectedCategory!];
+                                    } else {
+                                      selectedCategory = null;
+                                      selectedCategories = [];
+                                    }
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null) {
+                                    return 'Vui lòng chọn danh mục chính';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                     
 
                       // Product Description
                       // TextFormField(

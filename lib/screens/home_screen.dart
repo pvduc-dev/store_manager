@@ -2,9 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:store_manager/widgets/organism/line_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/category_provider.dart';
+import '../models/category.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load categories khi screen được khởi tạo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CategoryProvider>().loadCategories();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +52,33 @@ class HomeScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Text('Biểu đồ doanh thu'),
+          
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Biểu đồ doanh thu',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             LineChartSample2(),
+            const SizedBox(height: 24),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Thống kê đơn hàng',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 200,
               child: BarChart(
@@ -52,6 +94,19 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Trạng thái đơn hàng',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 200,
               child: PieChart(
@@ -76,6 +131,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

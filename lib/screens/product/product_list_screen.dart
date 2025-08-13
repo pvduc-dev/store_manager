@@ -1094,6 +1094,47 @@ class _ProductListScreenState extends State<ProductListScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          // Hiển thị categories nếu có
+          if (product.categories.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 2,
+              children: product.categories.take(2).map((category) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    category.name,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+            ),
+            // Hiển thị dấu "..." nếu có nhiều hơn 2 categories
+            if (product.categories.length > 2)
+              Text(
+                '...',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
         ],
       ),
     );
