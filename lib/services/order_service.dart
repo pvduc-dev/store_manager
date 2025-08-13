@@ -61,14 +61,50 @@ class OrderService {
     }
   }
 
+  /// Cập nhật đơn hàng
+  static Future<Order?> updateOrder({
+    required int orderId,
+    required Map<String, dynamic> billingInfo,
+    required List<Map<String, dynamic>> lineItems,
+    String paymentMethod = 'cod',
+    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String? customerNote,
+    List<Map<String, dynamic>>? feeLines,
+  }) async {
+    try {
+      final orderData = {
+        'payment_method': paymentMethod,
+        'payment_method_title': paymentMethodTitle,
+        'billing': billingInfo,
+        'shipping': billingInfo, // Use billing info for shipping too
+        'line_items': lineItems,
+        'fee_lines': feeLines ?? [],
+        'customer_note': customerNote ?? '',
+      };
+
+      final response = await Dio().put(
+        '$baseUrl/orders/$orderId',
+        data: orderData,
+        options: Options(headers: {'Authorization': basicAuth})
+      );
+      return Order.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      print('Error updating order $orderId: $e');
+      if (e is DioException) {
+        print('Error details: ${e.response?.data}');
+      }
+      return null;
+    }
+  }
+
   /// Tạo đơn hàng mới
   static Future<Order?> createOrder({
     required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
-    required List<Map<String, dynamic>> feeLines,
     String paymentMethod = 'cod',
     String paymentMethodTitle = 'Thanh toán khi nhận hàng',
     String? customerNote,
+    List<Map<String, dynamic>>? feeLines,
   }) async {
     try {
       final orderData = {
@@ -79,7 +115,7 @@ class OrderService {
         'billing': billingInfo,
         'shipping': billingInfo, // Use billing info for shipping too
         'line_items': lineItems,
-        'fee_lines': feeLines,
+        'fee_lines': feeLines ?? [],
         'customer_note': customerNote ?? '',
       };
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:store_manager/models/product.dart' as models;
+import 'package:store_manager/models/category.dart';
 import 'package:store_manager/services/product_service.dart';
 
 enum ProductSortOption {
@@ -26,6 +27,7 @@ class ProductProvider extends ChangeNotifier {
   static const int _perPage = 20;
   String _searchQuery = '';
   ProductSortOption _sortOption = ProductSortOption.newest;
+  Category? _selectedCategory;
 
   List<models.Product> get products => _products;
 
@@ -37,6 +39,8 @@ class ProductProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   bool get isSearching => _searchQuery.isNotEmpty;
   ProductSortOption get sortOption => _sortOption;
+  Category? get selectedCategory => _selectedCategory;
+  bool get hasFilter => _selectedCategory != null;
 
   Future<void> loadProducts({bool refresh = false}) async {
     if (refresh) {
@@ -55,6 +59,7 @@ class ProductProvider extends ChangeNotifier {
         perPage: _perPage,
         orderby: _sortOption.orderby,
         order: _sortOption.order,
+        categoryId: _selectedCategory?.id,
       );
       _products = response;
       _productsMap = Map.fromEntries(
@@ -88,6 +93,7 @@ class ProductProvider extends ChangeNotifier {
           perPage: _perPage,
           orderby: _sortOption.orderby,
           order: _sortOption.order,
+          categoryId: _selectedCategory?.id,
         );
       } else {
         response = await ProductService.getProducts(
@@ -95,6 +101,7 @@ class ProductProvider extends ChangeNotifier {
           perPage: _perPage,
           orderby: _sortOption.orderby,
           order: _sortOption.order,
+          categoryId: _selectedCategory?.id,
         );
       }
       
@@ -141,6 +148,7 @@ class ProductProvider extends ChangeNotifier {
         perPage: _perPage,
         orderby: _sortOption.orderby,
         order: _sortOption.order,
+        categoryId: _selectedCategory?.id,
       );
       _products = response;
       _productsMap = Map.fromEntries(
@@ -171,6 +179,28 @@ class ProductProvider extends ChangeNotifier {
         await searchProducts(_searchQuery);
       } else {
         await loadProducts(refresh: true);
+      }
+    }
+  }
+
+  Future<void> filterByCategory(Category? category) async {
+    if (_selectedCategory != category) {
+      _selectedCategory = category;
+      if (_searchQuery.isNotEmpty) {
+        await searchProducts(_searchQuery);
+      } else {
+        await loadProducts(refresh: true);
+      }
+    }
+  }
+
+  void clearCategoryFilter() {
+    if (_selectedCategory != null) {
+      _selectedCategory = null;
+      if (_searchQuery.isNotEmpty) {
+        searchProducts(_searchQuery);
+      } else {
+        loadProducts(refresh: true);
       }
     }
   }

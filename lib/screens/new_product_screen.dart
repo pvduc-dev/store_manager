@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/product_service.dart';
 import '../providers/product_provider.dart';
+import '../models/category.dart';
+import '../widgets/molecule/category_tree.dart';
 
 class NewProductScreen extends StatefulWidget {
   const NewProductScreen({super.key});
@@ -29,6 +31,8 @@ class _NewProductScreenState extends State<NewProductScreen> {
   late TextEditingController paczkaController;
   late TextEditingController kartonController;
   late TextEditingController khoHangController;
+  
+  Category? selectedCategory;
 
   @override
   void initState() {
@@ -79,6 +83,11 @@ class _NewProductScreenState extends State<NewProductScreen> {
         'price': priceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
+        'categories': selectedCategory != null
+            ? [
+                {'id': selectedCategory!.id},
+              ]
+            : [],
         'meta_data': [
           {'key': 'paczka', 'value': paczkaController.text.trim()},
           {'key': 'karton', 'value': kartonController.text.trim()},
@@ -306,6 +315,27 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // Category Selector
+                Text(
+                  'Danh mục sản phẩm',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                CategorySelector(
+                  selectedCategory: selectedCategory,
+                  hintText: 'Chọn danh mục sản phẩm',
+                  onCategorySelected: (category) {
+                    setState(() {
+                      selectedCategory = category;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+
                 // TextFormField(
                 //   controller: descriptionController,
                 //   maxLines: 3,
@@ -356,7 +386,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
                 TextFormField(
                   controller: khoHangController,
-                  keyboardType: TextInputType.name,
+                  keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
                     labelText: 'Kho hàng',

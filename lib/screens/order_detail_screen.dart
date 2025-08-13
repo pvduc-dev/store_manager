@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+import 'package:store_manager/utils/pdf_util.dart';
 import '../models/order.dart';
 import '../providers/order_provider.dart';
 import 'package:store_manager/utils/currency_formatter.dart';
@@ -37,6 +39,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.print,
+              color: Colors.blue,
+            ),
+            onPressed: () => _printInvoice(context),
+            tooltip: 'In hóa đơn',
+          ),
           TextButton(
             child: const Text(
               'Sửa',
@@ -46,7 +56,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
             onPressed: () {
-              // Implement edit functionality
+              context.push('/orders/${widget.orderId}/edit');
             },
           ),
         ],
@@ -172,6 +182,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         },
       ),
     );
+  }
+
+  void _printInvoice(BuildContext context) {
+    // Lấy thông tin đơn hàng từ provider
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final orderId = int.tryParse(widget.orderId);
+    if (orderId == null) return;
+    
+    final order = orderProvider.getOrderById(orderId);
+    if (order == null) return;
+
+    _performPrint(order);
+  }
+
+  void _performPrint(Order order) {
+    Printing.layoutPdf(onLayout: (format) {
+      return PdfUtil.generateOrderPdf(order);
+    });
   }
 
   Widget _buildInfoRow(String label, String prefix, String value, Color valueColor) {

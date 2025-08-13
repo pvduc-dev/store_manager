@@ -210,6 +210,54 @@ class Shipping {
   }
 }
 
+class OrderFeeLine {
+  final int id;
+  final String name;
+  final String taxClass;
+  final String taxStatus;
+  final String total;
+  final String totalTax;
+  final List<Map<String, dynamic>> taxes;
+  final List<Map<String, dynamic>> metaData;
+
+  OrderFeeLine({
+    required this.id,
+    required this.name,
+    required this.taxClass,
+    required this.taxStatus,
+    required this.total,
+    required this.totalTax,
+    required this.taxes,
+    required this.metaData,
+  });
+
+  factory OrderFeeLine.fromJson(Map<String, dynamic> json) {
+    return OrderFeeLine(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      taxClass: json['tax_class'] ?? '',
+      taxStatus: json['tax_status'] ?? 'taxable',
+      total: json['total'] ?? '0.00',
+      totalTax: json['total_tax'] ?? '0.00',
+      taxes: List<Map<String, dynamic>>.from(json['taxes'] ?? []),
+      metaData: List<Map<String, dynamic>>.from(json['meta_data'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'tax_class': taxClass,
+      'tax_status': taxStatus,
+      'total': total,
+      'total_tax': totalTax,
+      'taxes': taxes,
+      'meta_data': metaData,
+    };
+  }
+}
+
 class Order {
   final int id;
   final int parentId;
@@ -243,6 +291,7 @@ class Order {
   final String number;
   final List<Map<String, dynamic>> metaData;
   final List<OrderItem> lineItems;
+  final List<OrderFeeLine> feeLines;
   final String currencySymbol;
 
   Order({
@@ -278,6 +327,7 @@ class Order {
     required this.number,
     required this.metaData,
     required this.lineItems,
+    required this.feeLines,
     required this.currencySymbol,
   });
 
@@ -318,6 +368,10 @@ class Order {
           ?.map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
           .toList() ??
           [],
+      feeLines: (json['fee_lines'] as List?)
+          ?.map((item) => OrderFeeLine.fromJson(item as Map<String, dynamic>))
+          .toList() ??
+          [],
       currencySymbol: json['currency_symbol'] ?? '',
     );
   }
@@ -356,6 +410,7 @@ class Order {
       'number': number,
       'meta_data': metaData,
       'line_items': lineItems.map((item) => item.toJson()).toList(),
+      'fee_lines': feeLines.map((item) => item.toJson()).toList(),
       'currency_symbol': currencySymbol,
     };
   }

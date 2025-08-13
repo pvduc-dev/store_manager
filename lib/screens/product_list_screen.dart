@@ -477,21 +477,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ),
 
             Spacer(),
-            // Container(
-            //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            //   decoration: BoxDecoration(
-            //     color: Colors.grey[100],
-            //     borderRadius: BorderRadius.circular(16),
-            //   ),
-            //   child: Row(
-            //     children: [
-            //       Icon(Icons.filter_list, size: 16),
-            //       SizedBox(width: 4),
-            //       Text('Bộ lọc', style: TextStyle(fontSize: 16)),
-            //     ],
-            //   ),
-            // ),
-            SizedBox(width: 12),
           ],
           if (_isSelectionMode) Spacer(),
 

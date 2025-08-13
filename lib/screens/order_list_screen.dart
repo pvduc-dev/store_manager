@@ -15,10 +15,22 @@ class OrderListScreen extends StatefulWidget {
 class _OrderListScreenState extends State<OrderListScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Đồng bộ search controller với provider state
+    final orderProvider = Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    );
+    _syncSearchController(orderProvider);
   }
 
   @override
@@ -35,15 +47,31 @@ class _OrderListScreenState extends State<OrderListScreen> {
     }
   }
 
+  void _syncSearchController(OrderProvider orderProvider) {
+    // Đồng bộ controller với provider state
+    if (orderProvider.searchQuery != _searchController.text) {
+      _searchController.text = orderProvider.searchQuery;
+    }
+  }
+
+  void _performSearch() {
+    final orderProvider = Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    );
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      orderProvider.searchOrders(query);
+    } else {
+      orderProvider.clearSearch();
+    }
+  }
+
   Future<void> _onRefresh(BuildContext context) async {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     _searchController.clear(); // Clear search field khi refresh
+    orderProvider.clearSearch();
     await orderProvider.loadOrders(refresh: true);
-  }
-
-  void _handleSearch() {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    orderProvider.searchOrders(_searchController.text);
   }
 
   void _clearSearch() {
@@ -55,135 +83,94 @@ class _OrderListScreenState extends State<OrderListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đơn hàng'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        actions: [
-          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
-        ],
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Consumer<OrderProvider>(
-              builder: (context, orderProvider, child) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onSubmitted: (value) => _handleSearch(),
-                          decoration: InputDecoration(
-                            prefixIcon: Icon(Icons.search, color: Colors.grey),
-                            hintText: 'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            suffixIcon: orderProvider.isSearching
-                                ? IconButton(
-                                    icon: Icon(Icons.clear, color: Colors.grey),
-                                    onPressed: _clearSearch,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      ),
-                      if (!orderProvider.isSearching) ...[
-                        Container(
-                          height: 48,
-                          width: 1,
-                          color: Colors.grey[300],
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _handleSearch(),
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(8),
-                              bottomRight: Radius.circular(8),
-                            ),
-                            child: Container(
-                              padding: EdgeInsets.all(12),
-                              child: const Icon(
-                                Icons.search,
-                                color: Colors.blue,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            // Order List
+            Expanded(
+              child: Consumer<OrderProvider>(
+                builder: (context, orderProvider, child) {
+                  if (orderProvider.isLoading) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (orderProvider.orders.isEmpty) {
+                    return RefreshIndicator(
+                      onRefresh: () => _onRefresh(context),
+                      child: ListView(
+                        children: [
+                          SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    orderProvider.isSearching
+                                        ? Icons.search_off
+                                        : Icons.receipt_long_outlined,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    orderProvider.isSearching 
+                                        ? 'Không tìm thấy đơn hàng nào'
+                                        : 'Chưa có đơn hàng nào',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  if (orderProvider.isSearching) ...[
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Thử tìm kiếm với từ khóa khác',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(height: 8),
+                                ],
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Order List
-          Expanded(
-            child: Consumer<OrderProvider>(
-              builder: (context, orderProvider, child) {
-                if (orderProvider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                        ],
+                      ),
+                    );
+                  }
 
-                if (orderProvider.orders.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: () => _onRefresh(context),
-                    child: ListView(
-                      children: [
-                        SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: Text(
-                              orderProvider.isSearching 
-                                  ? 'Không tìm thấy đơn hàng với mã "${orderProvider.searchQuery}"'
-                                  : 'Không có đơn hàng nào',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      itemCount: orderProvider.orders.length + 
+                          (orderProvider.hasMoreData && !orderProvider.isSearching ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == orderProvider.orders.length && !orderProvider.isSearching) {
+                          // Load more indicator (chỉ hiển thị khi không tìm kiếm)
+                          return orderProvider.isLoadingMore
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(child: CircularProgressIndicator()),
+                                )
+                              : const SizedBox.shrink();
+                        }
+                        
+                        final order = orderProvider.orders[index];
+                        return _buildOrderItem(context, order);
+                      },
                     ),
                   );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => _onRefresh(context),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: orderProvider.orders.length + 
-                        (orderProvider.hasMoreData && !orderProvider.isSearching ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == orderProvider.orders.length && !orderProvider.isSearching) {
-                        // Load more indicator (chỉ hiển thị khi không tìm kiếm)
-                        return orderProvider.isLoadingMore
-                            ? const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Center(child: CircularProgressIndicator()),
-                              )
-                            : const SizedBox.shrink();
-                      }
-                      
-                      final order = orderProvider.orders[index];
-                      return _buildOrderItem(context, order);
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -297,5 +284,78 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Đơn hàng',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 16),
+                      Icon(Icons.search, color: Colors.grey[600]),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          style: TextStyle(fontSize: 16),
+                          onSubmitted: (_) => _performSearch(),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                            border: InputBorder.none,
+                            suffixIcon: Consumer<OrderProvider>(
+                              builder: (context, orderProvider, child) {
+                                if (orderProvider.isSearching) {
+                                  return IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: Colors.grey[600],
+                                    ),
+                                    onPressed: () {
+                                      _clearSearch();
+                                    },
+                                  );
+                                }
+                                return SizedBox.shrink();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              FilledButton(onPressed: _performSearch, child: Text('Tìm kiếm')),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

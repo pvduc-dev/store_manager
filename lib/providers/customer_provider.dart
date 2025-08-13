@@ -18,20 +18,7 @@ class CustomerProvider extends ChangeNotifier {
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMoreData => _hasMoreData;
   String get searchQuery => _searchQuery;
-
-  // Lấy danh sách customers được lọc theo tìm kiếm
-  List<Customer> get filteredCustomers {
-    if (_searchQuery.isEmpty) {
-      return _customers;
-    }
-    return _customers.where((customer) {
-      final query = _searchQuery.toLowerCase();
-      return customer.fullName.toLowerCase().contains(query) ||
-          customer.email.toLowerCase().contains(query) ||
-          customer.billingCompany.toLowerCase().contains(query) ||
-          customer.billingPhone.contains(query);
-    }).toList();
-  }
+  bool get isSearching => _searchQuery.isNotEmpty;
 
   Future<void> loadCustomers({bool refresh = false}) async {
     if (refresh) {
@@ -39,6 +26,7 @@ class CustomerProvider extends ChangeNotifier {
       _hasMoreData = true;
       _customers.clear();
       _customersMap.clear();
+      _searchQuery = '';
     }
     
     _isLoading = true;
@@ -156,9 +144,11 @@ class CustomerProvider extends ChangeNotifier {
   }
 
   Future<void> searchCustomers(String query) async {
-    _searchQuery = query;
+    _searchQuery = query.trim();
     
-    if (query.isEmpty) {
+    if (_searchQuery.isEmpty) {
+      _customers.clear();
+      _customersMap.clear();
       notifyListeners();
       return;
     }
@@ -167,22 +157,30 @@ class CustomerProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await CustomerService.searchCustomers(query);
+      final response = await CustomerService.getCustomers(
+        page: 1,
+        perPage: 50,
+        search: _searchQuery,
+      );
       _customers = response;
       _customersMap = Map.fromEntries(
         response.map((customer) => MapEntry(customer.id, customer)),
       );
+      _isLoading = false;
+      notifyListeners();
     } catch (e) {
       print('Error searching customers: $e');
-    } finally {
+      _customers = [];
       _isLoading = false;
       notifyListeners();
     }
   }
 
   void clearSearch() {
-    _searchQuery = '';
-    notifyListeners();
+    if (_searchQuery.isNotEmpty) {
+      _searchQuery = '';
+      loadCustomers(refresh: true);
+    }
   }
 
   Customer? getCustomerById(int id) {

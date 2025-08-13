@@ -115,7 +115,11 @@ class _CustomerSearchBoxState extends State<CustomerSearchBox> {
     });
 
     try {
-      final customers = await CustomerService.searchCustomers(query);
+      final customers = await CustomerService.getCustomers(
+        page: 1,
+        perPage: 20,
+        search: query,
+      );
       if (mounted) {
         setState(() {
           _searchResults = customers;

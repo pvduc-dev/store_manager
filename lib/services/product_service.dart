@@ -11,11 +11,17 @@ class ProductService {
     int page = 1, 
     int perPage = 20,
     String orderby = 'date',
-    String order = 'desc'
+    String order = 'desc',
+    int? categoryId,
   }) async {
     try {
+      String url = '$baseUrl/products?per_page=$perPage&page=$page&orderby=$orderby&order=$order';
+      if (categoryId != null) {
+        url += '&category=$categoryId';
+      }
+      
       final response = await Dio().get(
-        '$baseUrl/products?per_page=$perPage&page=$page&orderby=$orderby&order=$order',
+        url,
         options: Options(headers: {'Authorization': basicAuth}),
       );
 
@@ -38,11 +44,17 @@ class ProductService {
     int page = 1, 
     int perPage = 20,
     String orderby = 'relevance',
-    String order = 'desc'
+    String order = 'desc',
+    int? categoryId,
   }) async {
     try {
+      String url = '$baseUrl/products?search=$query&per_page=$perPage&page=$page&order_by=$orderby&order=$order';
+      if (categoryId != null) {
+        url += '&category=$categoryId';
+      }
+      
       final response = await Dio().get(
-        '$baseUrl/products?search=$query&per_page=$perPage&page=$page&order_by=$orderby&order=$order',
+        url,
         options: Options(headers: {'Authorization': basicAuth}),
       );
 

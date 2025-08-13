@@ -102,6 +102,7 @@ class OrderProvider extends ChangeNotifier {
     }
 
     _isSearching = true;
+    _isLoading = true;
     notifyListeners();
 
     try {
@@ -111,10 +112,12 @@ class OrderProvider extends ChangeNotifier {
       );
       
       _filteredOrders = searchResults;
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       print('Error searching orders: $e');
       _filteredOrders = [];
+      _isLoading = false;
       notifyListeners();
     }
   }
@@ -179,13 +182,58 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  Future<Order?> updateOrder({
+    required int orderId,
+    required Map<String, dynamic> billingInfo,
+    required List<Map<String, dynamic>> lineItems,
+    String paymentMethod = 'cod',
+    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String? customerNote,
+    List<Map<String, dynamic>>? feeLines,
+  }) async {
+    try {
+      final updatedOrder = await OrderService.updateOrder(
+        orderId: orderId,
+        billingInfo: billingInfo,
+        lineItems: lineItems,
+        paymentMethod: paymentMethod,
+        paymentMethodTitle: paymentMethodTitle,
+        customerNote: customerNote,
+        feeLines: feeLines ?? [],
+      );
+      
+      if (updatedOrder != null) {
+        _ordersMap[orderId] = updatedOrder;
+        
+        final index = _orders.indexWhere((o) => o.id == orderId);
+        if (index != -1) {
+          _orders[index] = updatedOrder;
+        }
+        
+        if (_isSearching) {
+          final searchIndex = _filteredOrders.indexWhere((o) => o.id == orderId);
+          if (searchIndex != -1) {
+            _filteredOrders[searchIndex] = updatedOrder;
+          }
+        }
+        
+        notifyListeners();
+        return updatedOrder;
+      }
+      return null;
+    } catch (e) {
+      print('Error updating order: $e');
+      return null;
+    }
+  }
+
   Future<Order?> createOrder({
     required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
     String paymentMethod = 'cod',
     String paymentMethodTitle = 'Thanh toán khi nhận hàng',
     String? customerNote,
-    String? discount,
+    List<Map<String, dynamic>>? feeLines,
   }) async {
     try {
       final newOrder = await OrderService.createOrder(
@@ -194,13 +242,7 @@ class OrderProvider extends ChangeNotifier {
         paymentMethod: paymentMethod,
         paymentMethodTitle: paymentMethodTitle,
         customerNote: customerNote,
-        feeLines: [
-          {
-            'name': 'discount',
-            // đây là phần tiền được discount
-            'total': discount,
-          },
-        ],
+        feeLines: feeLines ?? [],
       );
       
       if (newOrder != null) {

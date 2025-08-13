@@ -166,34 +166,97 @@ class _ProductCardState extends State<ProductCard> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Product Image
-                Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
+                Stack(
+                  children: [
+                    Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        color: Colors.grey[200],
+                        image: widget.product.images.isNotEmpty
+                            ? DecorationImage(
+                                image: CachedNetworkImageProvider(
+                                  widget.product.images.first.src ?? '',
+                                ),
+                                fit: BoxFit.cover,
+                                onError: (exception, stackTrace) {
+                                  return;
+                                },
+                              )
+                            : null,
+                      ),
+                      child: widget.product.images.isEmpty
+                          ? Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey[400],
+                                size: 40,
+                              ),
+                            )
+                          : null,
                     ),
-                    color: Colors.grey[200],
-                    image: widget.product.images.isNotEmpty
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              widget.product.images.first.src ?? '',
+                    // Product ID Watermark
+                    Positioned.fill(
+                      child: Center(
+                        child: Transform.rotate(
+                          angle: -0.3, // Xoay nhẹ -17 độ
+                          child: Text(
+                            '${widget.product.id}',
+                            style: TextStyle(
+                              color: Colors.red.withOpacity(0.8),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              shadows: [
+                                // Tạo viền trắng bằng nhiều shadow
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(-1, -1),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(1, -1),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(-1, 1),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(1, 1),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(-1, 0),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(1, 0),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(0, -1),
+                                  blurRadius: 0,
+                                ),
+                                Shadow(
+                                  color: Colors.white,
+                                  offset: const Offset(0, 1),
+                                  blurRadius: 0,
+                                ),
+                              ],
                             ),
-                            fit: BoxFit.cover,
-                            onError: (exception, stackTrace) {
-                              return;
-                            },
-                          )
-                        : null,
-                  ),
-                  child: widget.product.images.isEmpty
-                      ? Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 40,
                           ),
-                        )
-                      : null,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 
                 // Product Info
@@ -213,14 +276,28 @@ class _ProductCardState extends State<ProductCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          CurrencyFormatter.formatPLNFromString(
-                            widget.product.metaData.where((element) => element.key == 'custom_price').firstOrNull?.value ?? '0'
-                          ),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Colors.red,
-                            fontWeight: FontWeight.w700,
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: CurrencyFormatter.formatPLNFromString(
+                                  widget.product.metaData.where((element) => element.key == 'custom_price').firstOrNull?.value ?? '0'
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' (${widget.product.metaData.where((element) => element.key == 'paczka').firstOrNull?.value ?? '1'})',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const Spacer(),

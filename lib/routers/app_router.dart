@@ -6,6 +6,7 @@ import 'package:store_manager/screens/customer_new_screen.dart';
 import 'package:store_manager/screens/home_screen.dart';
 import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
+import 'package:store_manager/screens/order_edit_screen.dart';
 import 'package:store_manager/screens/order_new_screen.dart';
 import 'package:store_manager/screens/product_detail.dart';
 import 'package:store_manager/screens/product_list_screen.dart';
@@ -20,7 +21,7 @@ import 'package:store_manager/widgets/shell_widget.dart';
 class AppRouter {
   static GoRouter appRouter(AuthProvider authNotifier) {
     return GoRouter(
-      initialLocation: '/products',
+      initialLocation: '/orders',
       // refreshListenable: authNotifier,
       routes: [
         GoRoute(
@@ -79,6 +80,11 @@ class AppRouter {
           path: '/orders/:id',
           builder: (context, state) =>
               OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/orders/:id/edit',
+          builder: (context, state) =>
+              OrderEditScreen(orderId: int.parse(state.pathParameters['id'] ?? '')),
         ),
         GoRoute(
           path: '/customers/new',

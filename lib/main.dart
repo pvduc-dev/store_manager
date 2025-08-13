@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/auth_provider.dart';
 import 'package:store_manager/providers/cart_provider.dart';
+import 'package:store_manager/providers/category_provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
 import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
@@ -17,14 +18,14 @@ void main() async {
   final orderProvider = OrderProvider();
   final customerProvider = CustomerProvider();
   final cartProvider = CartProvider();
-  
+  final categoryProvider = CategoryProvider();
   // Khởi tạo CartProvider với Hive
   await cartProvider.initialize();
   
   productProvider.loadProducts();
   orderProvider.loadOrders();
   customerProvider.loadCustomers();
-  
+  categoryProvider.fetchCategories();
   runApp(
     StoreManagerApp(
       authProvider: authProvider,
@@ -32,6 +33,7 @@ void main() async {
       orderProvider: orderProvider,
       customerProvider: customerProvider,
       cartProvider: cartProvider,
+      categoryProvider: categoryProvider,
     ),
   );
 }
@@ -42,6 +44,7 @@ class StoreManagerApp extends StatelessWidget {
   final OrderProvider orderProvider;
   final CustomerProvider customerProvider;
   final CartProvider cartProvider;
+  final CategoryProvider categoryProvider;
   const StoreManagerApp({
     super.key,
     required this.authProvider,
@@ -49,6 +52,7 @@ class StoreManagerApp extends StatelessWidget {
     required this.orderProvider,
     required this.customerProvider,
     required this.cartProvider,
+    required this.categoryProvider,
   });
 
   @override
@@ -60,6 +64,7 @@ class StoreManagerApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: orderProvider),
         ChangeNotifierProvider.value(value: customerProvider),
         ChangeNotifierProvider.value(value: cartProvider),
+        ChangeNotifierProvider.value(value: categoryProvider),
       ],
       child: KeyboardDismissOnTap(
         child: MaterialApp.router(

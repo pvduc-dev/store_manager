@@ -70,13 +70,15 @@ class OfflineCartItemAdapter extends TypeAdapter<OfflineCartItem> {
       imageUrl: fields[4] as String?,
       description: fields[5] as String?,
       addedAt: fields[6] as DateTime,
+      lineItemId: fields[7] as int?,
+      isDeleted: fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, OfflineCartItem obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -90,7 +92,11 @@ class OfflineCartItemAdapter extends TypeAdapter<OfflineCartItem> {
       ..writeByte(5)
       ..write(obj.description)
       ..writeByte(6)
-      ..write(obj.addedAt);
+      ..write(obj.addedAt)
+      ..writeByte(7)
+      ..write(obj.lineItemId)
+      ..writeByte(8)
+      ..write(obj.isDeleted);
   }
 
   @override

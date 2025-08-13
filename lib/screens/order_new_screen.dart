@@ -27,13 +27,14 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _noteController = TextEditingController();
-  final _discountController = TextEditingController();
+  final _taxRateController = TextEditingController();
+  final _taxRateFocusNode = FocusNode();
 
   // Payment method
   String _paymentMethod = 'Thanh toán khi nhận hàng';
 
-  // Discount rate
-  double _discountRate = 1.23;
+  // Tax rate
+  double _taxRate = 1.23;
 
   // Customer selection
   Customer? _selectedCustomer;
@@ -41,8 +42,11 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
   @override
   void initState() {
     super.initState();
-    // Set default discount value
-    _discountController.text = _discountRate.toStringAsFixed(2);
+    // Set default tax rate value
+    _taxRateController.text = _taxRate.toStringAsFixed(2);
+    
+    // Add focus listener for tax rate field
+    _taxRateFocusNode.addListener(_onTaxRateFocusChanged);
   }
 
   @override
@@ -55,8 +59,34 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _noteController.dispose();
-    _discountController.dispose();
+    _taxRateController.dispose();
+    _taxRateFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onTaxRateFocusChanged() {
+    if (!_taxRateFocusNode.hasFocus) {
+      // User has unfocused from tax rate field
+      _validateAndUpdateTaxRate();
+    }
+  }
+
+  void _validateAndUpdateTaxRate() {
+    final text = _taxRateController.text.trim();
+    final value = double.tryParse(text);
+    
+    if (value == null || value <= 0) {
+      // Invalid value, reset to default
+      setState(() {
+        _taxRate = 1.23;
+        _taxRateController.text = _taxRate.toStringAsFixed(2);
+      });
+    } else {
+      // Valid value, update tax rate
+      setState(() {
+        _taxRate = value;
+      });
+    }
   }
 
   @override
@@ -321,15 +351,15 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
       );
     }
 
-    // Gross total (fixed, based on original product prices)
-    double grossTotal = 0;
+    // Net total (price before tax - Razem netto)
+    double netTotal = 0;
     for (var item in items) {
       double price = double.tryParse(item.price) ?? 0;
-      grossTotal += price * item.quantity;
+      netTotal += price * item.quantity;
     }
 
-    // Calculate net price with discount
-    double netTotal = grossTotal / _discountRate;
+    // Calculate gross price with tax (Suma Brutto)
+    double bruttoTotal = netTotal * _taxRate;
 
     return Container(
       decoration: BoxDecoration(
@@ -429,13 +459,13 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Subtotal (Gross total - fixed)
+                // Net total before tax
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Tổng cộng:', style: TextStyle(fontSize: 16)),
                     Text(
-                      CurrencyFormatter.formatPLN(grossTotal),
+                      CurrencyFormatter.formatPLN(netTotal),
                       style: const TextStyle(fontSize: 16),
                     ),
                   ],
@@ -451,11 +481,28 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                       'Razem (Netto):',
                       style: TextStyle(fontSize: 16),
                     ),
-                    // Ô nhập chiết khấu
+                    Text(
+                      CurrencyFormatter.formatPLN(netTotal),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Tax rate input row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Hệ số thuế:',
+                      style: TextStyle(fontSize: 16),
+                    ),
                     SizedBox(
                       width: 80,
                       child: TextField(
-                        controller: _discountController,
+                        controller: _taxRateController,
+                        focusNode: _taxRateFocusNode,
                         decoration: const InputDecoration(
                           hintText: '1.23',
                           border: OutlineInputBorder(),
@@ -469,19 +516,13 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                           decimal: true,
                           signed: true,
                         ),
-                        onChanged: (value) {
-                          setState(() {
-                            _discountRate = double.tryParse(value) ?? 1.23;
-                          });
-                        },
                       ),
                     ),
-                    Text(
-                      CurrencyFormatter.formatPLN(netTotal),
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    const SizedBox(width: 50),
                   ],
                 ),
+                const SizedBox(height: 12),
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -493,7 +534,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                       ),
                     ),
                     Text(
-                      CurrencyFormatter.formatPLN(grossTotal),
+                      CurrencyFormatter.formatPLN(bruttoTotal),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -621,12 +662,15 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
     );
 
     try {
-      // Calculate gross total for order notes
-      double grossTotal = 0;
+      // Calculate net total (before tax) for order notes
+      double netTotal = 0;
       for (var item in items) {
         double price = double.tryParse(item.price) ?? 0;
-        grossTotal += price * item.quantity;
+        netTotal += price * item.quantity;
       }
+      
+      // Calculate brutto total (after tax)
+      double bruttoTotal = netTotal * _taxRate;
 
       // Prepare billing info
       final fullName = _firstNameController.text.split(' ');
@@ -646,30 +690,35 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         'phone': _phoneController.text,
       };
 
-      // Prepare line items with original price (no discount applied here)
+      // Prepare line items with net price (before tax)
       final lineItems = items.map((item) {
         double basePrice = double.tryParse(item.price) ?? 0;
         return {
           'product_id': item.productId,
           'quantity': item.quantity,
           'total': '${basePrice * item.quantity}',
+          'subtotal': '${basePrice * item.quantity}', // Subtotal equals total
         };
       }).toList();
 
-      // Calculate discount amount (số tiền được giảm - số âm)
-      double netTotal = grossTotal / _discountRate;
-      double discountAmount = -(grossTotal - netTotal);
+      // Calculate tax amount 
+      double taxAmount = bruttoTotal - netTotal;
 
-      // Prepare customer note with discount info
+      // Prepare customer note (only user's note, no tax info)
       String customerNote = _noteController.text.trim();
-      if (customerNote.isNotEmpty) {
-        customerNote += '\n';
-      }
-      customerNote +=
-          'Discount rate: ${_discountRate.toStringAsFixed(2)} | Gross total: ${CurrencyFormatter.formatPLN(grossTotal)} | Net total: ${CurrencyFormatter.formatPLN(netTotal)} | Discount amount: ${CurrencyFormatter.formatPLN(discountAmount)}';
-      if (_selectedCustomer != null) {
+      if (_selectedCustomer != null && customerNote.isNotEmpty) {
         customerNote += '\nCustomer ID: ${_selectedCustomer!.id}';
+      } else if (_selectedCustomer != null) {
+        customerNote = 'Customer ID: ${_selectedCustomer!.id}';
       }
+      
+      // Prepare tax fee lines
+      final taxFeeLines = [
+        {
+          'name': 'Tax (${_taxRate.toStringAsFixed(2)}x)',
+          'total': taxAmount.toStringAsFixed(2),
+        },
+      ];
 
       // Create order
       final order = await orderProvider.createOrder(
@@ -678,7 +727,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         paymentMethod: 'cod',
         paymentMethodTitle: _paymentMethod,
         customerNote: customerNote,
-        discount: discountAmount.toString(),
+        feeLines: taxFeeLines,
       );
 
       // Close loading dialog

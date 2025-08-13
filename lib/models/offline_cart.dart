@@ -125,6 +125,12 @@ class OfflineCartItem {
   @HiveField(6)
   final DateTime addedAt;
 
+  @HiveField(7)
+  final int? lineItemId; // WooCommerce line item ID for order editing
+
+  @HiveField(8)
+  final bool isDeleted; // Track if item is marked for deletion
+
   OfflineCartItem({
     required this.productId,
     required this.name,
@@ -133,6 +139,8 @@ class OfflineCartItem {
     this.imageUrl,
     this.description,
     required this.addedAt,
+    this.lineItemId, // Optional for order editing
+    this.isDeleted = false, // Default to not deleted
   });
 
   OfflineCartItem copyWith({
@@ -143,6 +151,8 @@ class OfflineCartItem {
     String? imageUrl,
     String? description,
     DateTime? addedAt,
+    int? lineItemId,
+    bool? isDeleted,
   }) {
     return OfflineCartItem(
       productId: productId ?? this.productId,
@@ -152,6 +162,8 @@ class OfflineCartItem {
       imageUrl: imageUrl ?? this.imageUrl,
       description: description ?? this.description,
       addedAt: addedAt ?? this.addedAt,
+      lineItemId: lineItemId ?? this.lineItemId,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 

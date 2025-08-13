@@ -118,7 +118,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => context.push('/products'),
+            onPressed: () => context.go('/products'),
             child: const Text('Xem danh sách sản phẩm'),
           ),
         ],

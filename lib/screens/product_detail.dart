@@ -7,8 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product.dart';
+import '../models/category.dart';
 import '../providers/product_provider.dart';
+import '../providers/category_provider.dart';
 import '../services/product_service.dart';
+import '../widgets/molecule/category_tree.dart';
 
 class ProductDetail extends StatefulWidget {
   final String id;
@@ -35,6 +38,8 @@ class _ProductDetailState extends State<ProductDetail> {
   late TextEditingController paczkaController;
   late TextEditingController kartonController;
   late TextEditingController warehouseController;
+  
+  Category? selectedCategory;
 
   @override
   void initState() {
@@ -45,6 +50,12 @@ class _ProductDetailState extends State<ProductDetail> {
     paczkaController = TextEditingController();
     kartonController = TextEditingController();
     warehouseController = TextEditingController();
+    
+    // Ensure categories are loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CategoryProvider>().fetchCategories();
+    });
+    
     _loadProduct();
   }
 
@@ -98,6 +109,42 @@ class _ProductDetailState extends State<ProductDetail> {
             orElse: () => MetaData(key: 'kho_hang', value: ''),
           )
           .value;
+      
+      // Load current category
+      _loadCurrentCategory(loadedProduct);
+    }
+  }
+
+  void _loadCurrentCategory(Product product) {
+    // If product has categories, find the first one
+    if (product.categories.isNotEmpty) {
+      final productCategoryId = product.categories.first.id;
+      
+      // Wait for categories to be loaded, then find the category
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(Duration(milliseconds: 500), () {
+          final categoryProvider = context.read<CategoryProvider>();
+          
+          if (categoryProvider.categories.isNotEmpty) {
+            final category = categoryProvider.categories.firstWhere(
+              (cat) => cat.id == productCategoryId,
+              orElse: () => Category(
+                id: productCategoryId,
+                name: 'Danh mục không xác định',
+                slug: '',
+                parent: 0,
+                description: '',
+              ),
+            );
+            
+            if (mounted) {
+              setState(() {
+                selectedCategory = category;
+              });
+            }
+          }
+        });
+      });
     }
   }
 
@@ -129,6 +176,11 @@ class _ProductDetailState extends State<ProductDetail> {
         'price': customPriceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
+        'categories': selectedCategory != null
+            ? [
+                {'id': selectedCategory!.id},
+              ]
+            : [],
         'meta_data': [
           {'key': 'paczka', 'value': paczkaController.text.trim()},
           {'key': 'karton', 'value': kartonController.text.trim()},
@@ -393,6 +445,27 @@ class _ProductDetailState extends State<ProductDetail> {
                       ),
                       const SizedBox(height: 24),
 
+                      // Category Selector
+                      Text(
+                        'Danh mục sản phẩm',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CategorySelector(
+                        selectedCategory: selectedCategory,
+                        hintText: 'Chọn danh mục sản phẩm',
+                        onCategorySelected: (category) {
+                          setState(() {
+                            selectedCategory = category;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
                       // Product Description
                       // TextFormField(
                       //   controller: descriptionController,
@@ -448,7 +521,7 @@ class _ProductDetailState extends State<ProductDetail> {
                       // Kho hang
                       TextFormField(
                         controller: warehouseController,
-                        keyboardType: TextInputType.name,
+                        keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
                           labelText: 'Kho hang',

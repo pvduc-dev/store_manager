@@ -6,10 +6,20 @@ class CustomerService {
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
-  static Future<List<Customer>> getCustomers({int page = 1, int perPage = 20}) async {
+  static Future<List<Customer>> getCustomers({
+    int page = 1, 
+    int perPage = 20,
+    String? search,
+  }) async {
     try {
+      // Build URL with optional search parameter
+      String url = '$baseUrl/customers?per_page=$perPage&page=$page&orderby=registered_date&order=desc';
+      if (search != null && search.isNotEmpty) {
+        url += '&search=$search';
+      }
+      
       final response = await Dio().get(
-        '$baseUrl/customers?per_page=$perPage&page=$page&orderby=registered_date&order=desc',
+        url,
         options: Options(headers: {'Authorization': basicAuth}),
       );
 
@@ -113,28 +123,6 @@ class CustomerService {
     } catch (e) {
       print('Exception while deleting customer: $e');
       return false;
-    }
-  }
-
-  static Future<List<Customer>> searchCustomers(String query) async {
-    try {
-      final response = await Dio().get(
-        '$baseUrl/customers?search=$query&per_page=50',
-        options: Options(headers: {'Authorization': basicAuth}),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        return data
-            .map((json) => Customer.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        print('Error searching customers: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      print('Exception while searching customers: $e');
-      return [];
     }
   }
 }
