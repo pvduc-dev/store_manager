@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/product_service.dart';
 import '../providers/product_provider.dart';
+import '../providers/category_provider.dart';
+import '../models/category.dart' as product_category;
 
 class NewProductScreen extends StatefulWidget {
   const NewProductScreen({super.key});
@@ -29,6 +31,8 @@ class _NewProductScreenState extends State<NewProductScreen> {
   late TextEditingController paczkaController;
   late TextEditingController kartonController;
   late TextEditingController khoHangController;
+  
+  product_category.Category? selectedCategory; // Danh mục được chọn
 
   @override
   void initState() {
@@ -39,6 +43,11 @@ class _NewProductScreenState extends State<NewProductScreen> {
     paczkaController = TextEditingController();
     kartonController = TextEditingController();
     khoHangController = TextEditingController();
+    
+    // Lấy danh sách danh mục khi khởi tạo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CategoryProvider>().fetchCategories();
+    });
   }
 
   @override
@@ -79,6 +88,9 @@ class _NewProductScreenState extends State<NewProductScreen> {
         'price': priceController.text.trim(),
         'type': 'simple',
         'status': 'publish',
+        'categories': selectedCategory != null ? [
+          {'id': selectedCategory!.id}
+        ] : [],
         'meta_data': [
           {'key': 'paczka', 'value': paczkaController.text.trim()},
           {'key': 'karton', 'value': kartonController.text.trim()},
@@ -304,6 +316,92 @@ class _NewProductScreenState extends State<NewProductScreen> {
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
+                ),
+                const SizedBox(height: 24),
+
+                // Dropdown chọn danh mục sản phẩm
+                Consumer<CategoryProvider>(
+                  builder: (context, categoryProvider, child) {
+                    if (categoryProvider.isLoading) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    if (categoryProvider.error != null) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.red),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.red),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Lỗi: ${categoryProvider.error}',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => categoryProvider.fetchCategories(),
+                              child: Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (categoryProvider.categories.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info, color: Colors.grey),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Không có danh mục nào',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return DropdownButtonFormField<product_category.Category>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Danh mục sản phẩm',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                      hint: const Text('Chọn danh mục'),
+                      items: categoryProvider.categories.map((product_category.Category category) {
+                        return DropdownMenuItem<product_category.Category>(
+                          value: category,
+                          child: Text(category.name),
+                        );
+                      }).toList(),
+                      onChanged: (product_category.Category? newValue) {
+                        setState(() {
+                          selectedCategory = newValue;
+                        });
+                      },
+                      validator: (value) {
+                        // Có thể thêm validation nếu cần
+                        return null;
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 

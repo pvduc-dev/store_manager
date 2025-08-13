@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../models/order.dart';
 import '../../services/pdf_invoice_service.dart';
 import '../../providers/order_provider.dart';
+import '../../widgets/pdf_download_button.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -612,10 +612,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: SizedBox(
                     width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => _onPrintInvoice(order),
-                      icon: const Icon(Icons.print),
-                      label: const Text('In hoá đơn'),
+                    child: PdfDownloadButton(
+                      filename: 'invoice_${order.number.isNotEmpty ? order.number : order.id}.pdf',
+                      generatePdf: () => PdfInvoiceService.generateInvoicePdf(order: order),
+                      onSuccess: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('PDF đã được tải về thành công!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      onError: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Không thể tải PDF. Vui lòng thử lại.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -748,20 +763,5 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _onPrintInvoice(Order order) async {
-    try {
-      final bytes = await PdfInvoiceService.generateInvoicePdf(order: order);
-      if (!mounted) return;
-      final filename =
-          'invoice_${order.number.isNotEmpty ? order.number : order.id}.pdf';
 
-      // Mở Share Sheet hệ thống: người dùng chọn "Save to Files" để lưu
-      await Printing.sharePdf(bytes: bytes, filename: filename);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Không thể tạo PDF: $e')));
-    }
-  }
 }

@@ -28,6 +28,7 @@ dependencies:
   path_provider: ^2.1.4
   file_saver: ^0.2.12
   shared_preferences: ^2.3.3
+  permission_handler: ^11.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

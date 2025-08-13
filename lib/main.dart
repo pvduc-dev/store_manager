@@ -6,6 +6,7 @@ import 'package:store_manager/providers/cart_provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
 import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
+import 'package:store_manager/providers/category_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:store_manager/services/auth_service.dart';
@@ -17,6 +18,7 @@ void main() {
   final orderProvider = OrderProvider();
   final customerProvider = CustomerProvider();
   final cartProvider = CartProvider();
+  final categoryProvider = CategoryProvider();
   AuthService.login('phapvn', 'PhapDuy@2025');
   productProvider.loadProducts();
   orderProvider.loadOrders();
@@ -28,6 +30,7 @@ void main() {
       orderProvider: orderProvider,
       customerProvider: customerProvider,
       cartProvider: cartProvider,
+      categoryProvider: categoryProvider,
     ),
   );
 }
@@ -38,6 +41,7 @@ class StoreManagerApp extends StatelessWidget {
   final OrderProvider orderProvider;
   final CustomerProvider customerProvider;
   final CartProvider cartProvider;
+  final CategoryProvider categoryProvider;
   const StoreManagerApp({
     super.key,
     required this.authProvider,
@@ -45,6 +49,7 @@ class StoreManagerApp extends StatelessWidget {
     required this.orderProvider,
     required this.customerProvider,
     required this.cartProvider,
+    required this.categoryProvider,
   });
 
   @override
@@ -56,6 +61,7 @@ class StoreManagerApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: orderProvider),
         ChangeNotifierProvider.value(value: customerProvider),
         ChangeNotifierProvider.value(value: cartProvider),
+        ChangeNotifierProvider.value(value: categoryProvider),
       ],
       child: KeyboardDismissOnTap(
         child: MaterialApp.router(
