@@ -85,10 +85,7 @@ class _OrderSummaryWidgetState extends State<OrderSummaryWidget> {
             children: [
               _buildSummaryRow('Tổng số sản phẩm', '${widget.cart.itemCount} sản phẩm'),
               const SizedBox(height: 8),
-              if (widget.cart.discount > 0) ...[
-                _buildSummaryRow('Giảm giá', '-${widget.cart.discount.toStringAsFixed(2)} zł'),
-                const SizedBox(height: 8),
-              ],
+              
               _buildSummaryRow('Tổng tiền hàng', '${widget.cart.subtotal.toStringAsFixed(2)} zł'),
               const SizedBox(height: 8),
               _buildSummaryRow('Tổng cộng', '${widget.cart.subtotal.toStringAsFixed(2)} zł', isTotal: true),

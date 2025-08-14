@@ -3,6 +3,7 @@ import 'package:file_saver/file_saver.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../services/permission_service.dart';
+import 'pdf_viewer.dart';
 
 class PdfDownloadButton extends StatelessWidget {
   final String filename;
@@ -54,17 +55,34 @@ class PdfDownloadButton extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => _downloadPdf(context, snapshot.data!),
-              icon: const Icon(Icons.download),
-              label: const Text('Tải PDF'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+          return Row(
+            children: [
+              // Nút xem trước PDF
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _previewPdf(context, snapshot.data!),
+                  icon: const Icon(Icons.preview),
+                  label: const Text('Xem trước'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              // Nút tải PDF
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _downloadPdf(context, snapshot.data!),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Tải PDF'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           );
         }
 
@@ -78,6 +96,31 @@ class PdfDownloadButton extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _previewPdf(BuildContext context, List<int> pdfBytes) async {
+    try {
+      // Hiển thị PDF trong màn hình với tính năng zoom
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PdfViewer(
+              pdfBytes: pdfBytes,
+              filename: filename,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể xem PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _downloadPdf(BuildContext context, List<int> pdfBytes) async {

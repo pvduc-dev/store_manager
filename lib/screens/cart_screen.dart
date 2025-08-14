@@ -587,29 +587,6 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                         ],
                       ),
-
-                      // Hiển thị tổng tiết kiệm nếu có
-                      if (totalSavings > 0)
-                        Row(
-                          children: [
-                            Text(
-                              'Giảm giá:',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '-${totalSavings.toStringAsFixed(0)} zł',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ),

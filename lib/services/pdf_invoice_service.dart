@@ -47,10 +47,25 @@ class PdfInvoiceService {
       final currencySymbol = order.currencySymbol.isNotEmpty ? order.currencySymbol : '₫';
       final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
-      double subtotal = 0;
-      for (final item in order.lineItems) {
-        subtotal += double.tryParse(item.subtotal) ?? 0;
-      }
+      // Lấy dữ liệu từ meta_data
+      String subtotalStr = (order.metaData.firstWhere(
+        (e) => e['key'] == 'GIA_THUONG_LUONG',
+        orElse: () => {'key': '', 'value': '0'},
+      )['value'] ?? '0').toString();
+      
+      String totalTaxStr = (order.metaData.firstWhere(
+        (e) => e['key'] == 'total_tax',
+        orElse: () => {'key': '', 'value': '0'},
+      )['value'] ?? '0').toString();
+      
+      String totalStr = (order.metaData.firstWhere(
+        (e) => e['key'] == 'total',
+        orElse: () => {'key': '', 'value': '0'},
+      )['value'] ?? '0').toString();
+
+      double subtotal = double.tryParse(subtotalStr) ?? 0;
+      double totalTax = double.tryParse(totalTaxStr) ?? 0;
+      double total = double.tryParse(totalStr) ?? 0;
 
       pw.Widget buildInfoRow(String label, String value, {PdfColor color = PdfColors.black}) {
         return pw.Padding(
@@ -103,14 +118,13 @@ class PdfInvoiceService {
               ]),
               pw.SizedBox(height: 10),
               buildInfoRow('Netto', '${subtotal.toInt()}$currencySymbol'),
-              if ((double.tryParse(order.totalTax) ?? 0) > 0)
-                buildInfoRow('Thuế', '${(double.tryParse(order.totalTax) ?? 0).toInt()}$currencySymbol', color: PdfColors.orange),
+              if (totalTax > 0)
+                buildInfoRow('Thuế', '${totalTax.toInt()}$currencySymbol', color: PdfColors.orange),
               if ((double.tryParse(order.shippingTotal) ?? 0) > 0)
                 buildInfoRow('Phí vận chuyển', '${(double.tryParse(order.shippingTotal) ?? 0).toInt()}$currencySymbol', color: PdfColors.blue),
-              if ((double.tryParse(order.discountTotal) ?? 0) > 0)
-                buildInfoRow('Giảm giá', '-${(double.tryParse(order.discountTotal) ?? 0).toInt()}$currencySymbol', color: PdfColors.green),
+              
               pw.Divider(height: 16, thickness: 0.7, color: PdfColors.grey300),
-              buildInfoRow('Brutto', '${(double.tryParse(order.total) ?? 0).toInt()}$currencySymbol', color: PdfColors.red),
+              buildInfoRow('Brutto', '${total.toInt()}$currencySymbol', color: PdfColors.red),
               buildInfoRow('Số sản phẩm', '${order.lineItems.length} sản phẩm'),
               buildInfoRow('Thời gian đặt hàng', dateFormat.format(order.dateCreated.toLocal())),
               if (order.datePaid != null)
@@ -158,8 +172,8 @@ class PdfInvoiceService {
         if (order.customerNote.isNotEmpty) {
           children.add(buildInfoRow('Ghi chú khách hàng', ''));
           children.add(pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 10, top: 4),
-            child: pw.Text(order.customerNote, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic)),
+            padding: pw.EdgeInsets.only(left: 10, top: 4),
+            child: pw.Text(order.customerNote, style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic)),
           ));
         }
         if (order.customerIpAddress.isNotEmpty) {
@@ -252,10 +266,8 @@ class PdfInvoiceService {
       }
 
       pw.Widget totalsSection() {
-        final totalTax = (double.tryParse(order.totalTax) ?? 0).toInt();
         final shipping = (double.tryParse(order.shippingTotal) ?? 0).toInt();
         final discount = (double.tryParse(order.discountTotal) ?? 0).toInt();
-        final grandTotal = (double.tryParse(order.total) ?? 0).toInt();
 
         pw.Widget row(String label, String value, {PdfColor color = PdfColors.black, bool bold = false}) {
           return pw.Padding(
@@ -276,11 +288,11 @@ class PdfInvoiceService {
           ),
           child: pw.Column(children: [
             row('Tổng cộng', '${subtotal.toInt()}$currencySymbol'),
-            if (totalTax > 0) row('Thuế', '$totalTax$currencySymbol', color: PdfColors.orange),
+            if (totalTax > 0) row('Thuế', '${totalTax.toInt()}$currencySymbol', color: PdfColors.orange),
             if (shipping > 0) row('Phí vận chuyển', '$shipping$currencySymbol', color: PdfColors.blue),
-            if (discount > 0) row('Giảm giá', '-$discount$currencySymbol', color: PdfColors.green),
+            
             pw.Divider(height: 16, thickness: 0.7, color: PdfColors.grey300),
-            row('Tổng thanh toán', '$grandTotal$currencySymbol', color: PdfColors.red, bold: true),
+            row('Tổng thanh toán', '${total.toInt()}$currencySymbol', color: PdfColors.red, bold: true),
           ]),
         );
       }
