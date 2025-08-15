@@ -119,8 +119,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                   SizedBox(height: 16),
                                   Text(
                                     customerProvider.isSearching
-                                        ? 'Không tìm thấy khách hàng nào'
-                                        : 'Chưa có khách hàng nào',
+                                        ? 'Nie znaleziono klientów'
+                                        : 'Nie ma jeszcze klientów',
                                     style: TextStyle(
                                       fontSize: 18,
                                       color: Colors.grey[600],
@@ -129,7 +129,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                   if (customerProvider.isSearching) ...[
                                     SizedBox(height: 8),
                                     Text(
-                                      'Thử tìm kiếm với từ khóa khác',
+                                      'Spróbuj znaleźć klienta z innymi słowami kluczowymi',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey[500],
@@ -217,15 +217,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Khách hàng',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -246,7 +237,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           style: TextStyle(fontSize: 16),
                           onSubmitted: (_) => _performSearch(),
                           decoration: InputDecoration(
-                            hintText: 'Tìm kiếm theo tên, email, hoặc số điện thoại',
+                            hintText: 'Wyszukaj klienta',
                             hintStyle: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 16,
@@ -276,7 +267,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(onPressed: _performSearch, child: Text('Tìm kiếm')),
+              FilledButton(onPressed: _performSearch, child: Text('Szukaj')),
             ],
           ),
         ],

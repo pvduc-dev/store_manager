@@ -130,7 +130,7 @@ class _ProductDetailState extends State<ProductDetail> {
               (cat) => cat.id == productCategoryId,
               orElse: () => Category(
                 id: productCategoryId,
-                name: 'Danh mục không xác định',
+                name: 'Kategoria nieokreślona',
                 slug: '',
                 parent: 0,
                 description: '',
@@ -151,14 +151,14 @@ class _ProductDetailState extends State<ProductDetail> {
   Future<void> _saveProduct() async {
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tên sản phẩm')),
+        const SnackBar(content: Text('Proszę podać nazwę produktu')),
       );
       return;
     }
 
     if (customPriceController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập giá sản phẩm')),
+        const SnackBar(content: Text('Proszę podać cenę produktu')),
       );
       return;
     }
@@ -198,14 +198,14 @@ class _ProductDetailState extends State<ProductDetail> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật sản phẩm thành công!')),
+          const SnackBar(content: Text('Produkt został pomyślnie zaktualizowany!')),
         );
         context.go('/products');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lỗi khi cập nhật sản phẩm')),
+          const SnackBar(content: Text('Błąd podczas aktualizacji produktu')),
         );
       }
     } finally {
@@ -240,7 +240,7 @@ class _ProductDetailState extends State<ProductDetail> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Lỗi khi upload ảnh')));
+          ).showSnackBar(const SnackBar(content: Text('Błąd podczas przesyłania zdjęcia')));
         }
       } finally {
         setState(() {
@@ -259,11 +259,11 @@ class _ProductDetailState extends State<ProductDetail> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/products'),
         ),
-        title: const Text('Chỉnh sửa sản phẩm'),
+        title: const Text('Edytuj produkt'),
         centerTitle: true,
       ),
       body: product == null
-          ? const Center(child: Text('Không tìm thấy sản phẩm'))
+          ? const Center(child: Text('Nie znaleziono produktu'))
           : SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -306,7 +306,7 @@ class _ProductDetailState extends State<ProductDetail> {
                                                   ),
                                                   const SizedBox(height: 8),
                                                   const Text(
-                                                    'Không thể tải ảnh',
+                                                    'Nie można załadować zdjęcia',
                                                     style: TextStyle(
                                                       color: Colors.grey,
                                                     ),
@@ -336,7 +336,7 @@ class _ProductDetailState extends State<ProductDetail> {
                                                 ),
                                                 SizedBox(height: 8),
                                                 Text(
-                                                  'Đang upload...',
+                                                  'Przesyłanie...',
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 14,
@@ -372,7 +372,7 @@ class _ProductDetailState extends State<ProductDetail> {
                                               ),
                                               SizedBox(width: 4),
                                               Text(
-                                                'Đã upload',
+                                                'Przesłano',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 12,
@@ -404,7 +404,7 @@ class _ProductDetailState extends State<ProductDetail> {
                                               ),
                                               const SizedBox(height: 8),
                                               const Text(
-                                                'Không thể tải ảnh',
+                                                'Nie można załadować zdjęcia',
                                                 style: TextStyle(
                                                   color: Colors.grey,
                                                 ),
@@ -425,7 +425,7 @@ class _ProductDetailState extends State<ProductDetail> {
                                           const SizedBox(height: 8),
                                           OutlinedButton(
                                             onPressed: _pickImage,
-                                            child: const Text('Tải ảnh lên'),
+                                            child: const Text('Prześlij zdjęcie'),
                                           ),
                                         ],
                                       )),
@@ -438,7 +438,7 @@ class _ProductDetailState extends State<ProductDetail> {
                         controller: nameController,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
-                          labelText: 'Tên sản phẩm',
+                          labelText: 'Nazwa produktu',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -447,7 +447,7 @@ class _ProductDetailState extends State<ProductDetail> {
 
                       // Category Selector
                       Text(
-                        'Danh mục sản phẩm',
+                        'Kategoria produktu',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -457,7 +457,7 @@ class _ProductDetailState extends State<ProductDetail> {
                       const SizedBox(height: 8),
                       CategorySelector(
                         selectedCategory: selectedCategory,
-                        hintText: 'Chọn danh mục sản phẩm',
+                        hintText: 'Wybierz kategorię produktu',
                         onCategorySelected: (category) {
                           setState(() {
                             selectedCategory = category;
@@ -485,7 +485,7 @@ class _ProductDetailState extends State<ProductDetail> {
                         keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
-                          labelText: 'Giá bán',
+                          labelText: 'Cena sprzedaży',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -524,7 +524,7 @@ class _ProductDetailState extends State<ProductDetail> {
                         keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
-                          labelText: 'Kho hang',
+                          labelText: 'Magazyn',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -559,14 +559,14 @@ class _ProductDetailState extends State<ProductDetail> {
                     )
                   : isUploading
                       ? const Text(
-                          'Đang upload...',
+                          'Przesyłanie...',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         )
                       : const Text(
-                          'Lưu thay đổi',
+                          'Zapisz zmiany',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

@@ -9,7 +9,7 @@ class ProductService {
 
   static Future<List<Product>> getProducts({
     int page = 1, 
-    int perPage = 20,
+    int perPage = 100,
     String orderby = 'date',
     String order = 'desc',
     int? categoryId,
@@ -42,7 +42,7 @@ class ProductService {
 
   static Future<List<Product>> searchProducts(String query, {
     int page = 1, 
-    int perPage = 20,
+    int perPage = 100,
     String orderby = 'relevance',
     String order = 'desc',
     int? categoryId,

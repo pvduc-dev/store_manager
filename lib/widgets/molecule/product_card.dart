@@ -35,17 +35,14 @@ class _ProductCardState extends State<ProductCard> {
     try {
       final cartProvider = context.read<CartProvider>();
       
-      // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
       final existingItem = cartProvider.getItem(widget.product.id);
 
       if (existingItem != null) {
-        // Nếu đã có thì tăng số lượng lên 1
         await cartProvider.updateItemQuantity(
           widget.product.id,
           existingItem.quantity + 1,
         );
       } else {
-        // Lần đầu tiên thêm sản phẩm - sử dụng giá trị PACZKA làm số lượng mặc định
         String price = widget.product.metaData
             .firstWhere(
               (meta) => meta.key == 'custom_price',
@@ -53,7 +50,6 @@ class _ProductCardState extends State<ProductCard> {
             )
             .value;
         
-        // Lấy giá trị PACZKA từ metadata
         String paczkaValue = widget.product.metaData
             .firstWhere(
               (meta) => meta.key == 'paczka',
@@ -61,7 +57,6 @@ class _ProductCardState extends State<ProductCard> {
             )
             .value;
         
-        // Chuyển đổi PACZKA thành số nguyên, mặc định là 1 nếu không parse được
         int paczkaQuantity = int.tryParse(paczkaValue) ?? 1;
 
         await cartProvider.addItemToCart(
@@ -77,7 +72,7 @@ class _ProductCardState extends State<ProductCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi khi thêm sản phẩm: $e'),
+            content: Text('Błąd podczas dodawania produktu: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -102,13 +97,11 @@ class _ProductCardState extends State<ProductCard> {
 
       if (existingItem != null) {
         if (existingItem.quantity > 1) {
-          // Giảm số lượng
           await cartProvider.updateItemQuantity(
             widget.product.id,
             existingItem.quantity - 1,
           );
         } else {
-          // Xóa khỏi giỏ hàng
           await cartProvider.removeItem(widget.product.id);
         }
       }
@@ -143,7 +136,6 @@ class _ProductCardState extends State<ProductCard> {
       child: Stack(
         children: [
           Container(
-            margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -165,11 +157,10 @@ class _ProductCardState extends State<ProductCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Product Image
                 Stack(
                   children: [
                     Container(
-                      height: 100,
+                      height: 120,
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
@@ -197,11 +188,10 @@ class _ProductCardState extends State<ProductCard> {
                             )
                           : null,
                     ),
-                    // Product ID Watermark
                     Positioned.fill(
                       child: Center(
                         child: Transform.rotate(
-                          angle: -0.3, // Xoay nhẹ -17 độ
+                          angle: -0.3,
                           child: Text(
                             '${widget.product.id}',
                             style: TextStyle(
@@ -209,7 +199,6 @@ class _ProductCardState extends State<ProductCard> {
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
                               shadows: [
-                                // Tạo viền trắng bằng nhiều shadow
                                 Shadow(
                                   color: Colors.white,
                                   offset: const Offset(-1, -1),
@@ -259,7 +248,6 @@ class _ProductCardState extends State<ProductCard> {
                   ],
                 ),
                 
-                // Product Info
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -272,7 +260,7 @@ class _ProductCardState extends State<ProductCard> {
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
@@ -302,7 +290,6 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                         const Spacer(),
                         
-                        // Cart Action Section
                         if (!widget.isSelectionMode)
                           Consumer<CartProvider>(
                             builder: (context, cartProvider, child) {
@@ -310,7 +297,6 @@ class _ProductCardState extends State<ProductCard> {
                               final quantityInCart = existingItem?.quantity ?? 0;
 
                               if (quantityInCart == 0) {
-                                // Show Add to Cart button
                                 return SizedBox(
                                   width: double.infinity,
                                   height: 32,
@@ -334,7 +320,7 @@ class _ProductCardState extends State<ProductCard> {
                                             ),
                                           )
                                         : const Text(
-                                            'Thêm',
+                                            'Dodaj',
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
@@ -343,10 +329,8 @@ class _ProductCardState extends State<ProductCard> {
                                   ),
                                 );
                               } else {
-                                // Show quantity controls
                                 return Row(
                                   children: [
-                                    // Decrease button
                                     SizedBox(
                                       width: 32,
                                       height: 32,
@@ -365,7 +349,6 @@ class _ProductCardState extends State<ProductCard> {
                                       ),
                                     ),
                                     
-                                    // Quantity display
                                     Expanded(
                                       child: Container(
                                         alignment: Alignment.center,
@@ -385,7 +368,6 @@ class _ProductCardState extends State<ProductCard> {
                                       ),
                                     ),
                                     
-                                    // Increase button
                                     SizedBox(
                                       width: 32,
                                       height: 32,
@@ -416,7 +398,6 @@ class _ProductCardState extends State<ProductCard> {
             ),
           ),
           
-          // Selection indicator
           if (widget.isSelectionMode)
             Positioned(
               top: 16,

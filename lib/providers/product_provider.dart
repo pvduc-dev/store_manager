@@ -4,9 +4,9 @@ import 'package:store_manager/models/category.dart';
 import 'package:store_manager/services/product_service.dart';
 
 enum ProductSortOption {
-  newest('Mới nhất', 'date', 'desc'),
-  priceAsc('Giá: Thấp đến cao', 'price', 'asc'),
-  priceDesc('Giá: Cao đến thấp', 'price', 'desc');
+  newest('Najnowsze', 'date', 'desc'),
+  priceAsc('Cena: Od najniższej', 'price', 'asc'),
+  priceDesc('Cena: Od najwyższej', 'price', 'desc');
 
   const ProductSortOption(this.displayName, this.orderby, this.order);
   

@@ -40,7 +40,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   final _searchController = TextEditingController();
 
   // Payment method
-  String _paymentMethod = 'Thanh toán khi nhận hàng';
+  String _paymentMethod = 'Płatność przy odbiorze';
 
   // Tax rate
   double _taxRate = 1.23;
@@ -281,7 +281,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Không thể tải thông tin đơn hàng!'),
+          content: Text('Nie można załadować informacji o zamówieniu!'),
           backgroundColor: Colors.red,
         ),
       );
@@ -294,7 +294,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       return Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text('Chỉnh sửa đơn hàng'),
+          title: const Text('Edytuj zamówienie'),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
@@ -308,7 +308,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       return Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text('Chỉnh sửa đơn hàng'),
+          title: const Text('Edytuj zamówienie'),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
@@ -316,7 +316,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         ),
         body: const Center(
           child: Text(
-            'Không tìm thấy đơn hàng',
+            'Nie znaleziono zamówienia',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),
@@ -326,7 +326,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text('Chỉnh sửa đơn hàng #${_currentOrder!.number}'),
+        title: Text('Edytuj zamówienie #${_currentOrder!.number}'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -480,7 +480,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               _fillCustomerInfo(customer);
             },
             validator: (value) =>
-                value?.isEmpty == true ? 'Vui lòng nhập tên' : null,
+                value?.isEmpty == true ? 'Proszę podać nazwę' : null,
           ),
 
           const SizedBox(height: 16),
@@ -495,8 +495,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               controller: _taxCodeController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'NIP (tùy chọn)',
-                hintText: 'Nhập mã số thuế',
+                labelText: 'NIP (opcjonalnie)',
+                hintText: 'Wprowadź numer NIP',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -517,8 +517,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
             child: TextFormField(
               controller: _address1Controller,
               decoration: const InputDecoration(
-                labelText: 'Địa chỉ *',
-                hintText: 'Nhập địa chỉ',
+                labelText: 'Adres *',
+                hintText: 'Wprowadź adres',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -526,7 +526,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                 ),
               ),
               validator: (value) =>
-                  value?.isEmpty == true ? 'Vui lòng nhập địa chỉ' : null,
+                  value?.isEmpty == true ? 'Proszę podać adres' : null,
             ),
           ),
 
@@ -542,8 +542,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
-                labelText: 'Số điện thoại *',
-                hintText: 'Nhập số điện thoại',
+                labelText: 'Numer telefonu *',
+                hintText: 'Wprowadź numer telefonu',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -551,7 +551,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                 ),
               ),
               validator: (value) =>
-                  value?.isEmpty == true ? 'Vui lòng nhập số điện thoại' : null,
+                  value?.isEmpty == true ? 'Proszę podać numer telefonu' : null,
             ),
           ),
 
@@ -567,8 +567,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'Địa chỉ email *',
-                hintText: 'Nhập email',
+                labelText: 'Adres email *',
+                hintText: 'Wprowadź email',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -576,11 +576,11 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                 ),
               ),
               validator: (value) {
-                if (value?.isEmpty == true) return 'Vui lòng nhập email';
+                if (value?.isEmpty == true) return 'Proszę podać email';
                 if (!RegExp(
                   r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                 ).hasMatch(value!)) {
-                  return 'Email không hợp lệ';
+                  return 'Nieprawidłowy adres email';
                 }
                 return null;
               },
@@ -599,8 +599,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               controller: _noteController,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Ghi chú đơn hàng (tùy chọn)',
-                hintText: 'Ghi chú về đơn hàng',
+                labelText: 'Uwagi do zamówienia (opcjonalnie)',
+                hintText: 'Uwagi dotyczące zamówienia',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -648,7 +648,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Tìm kiếm sản phẩm để thêm vào đơn hàng...',
+              hintText: 'Wyszukaj produkty do dodania do zamówienia...',
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -714,7 +714,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'Không tìm thấy sản phẩm nào',
+                        'Nie znaleziono produktów',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ),
@@ -779,7 +779,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         ),
         child: const Center(
           child: Text(
-            'Đơn hàng không có sản phẩm\nSử dụng thanh tìm kiếm để thêm sản phẩm',
+            'Zamówienie nie zawiera produktów\nUżyj paska wyszukiwania, aby dodać produkty',
             style: TextStyle(fontSize: 16, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
@@ -819,7 +819,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_editableItems.length} mặt hàng | ${_editableItems.fold(0, (sum, item) => sum + item.quantity)} sản phẩm',
+                  '${_editableItems.length} pozycji | ${_editableItems.fold(0, (sum, item) => sum + item.quantity)} produktów',
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 16,
@@ -864,7 +864,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Tổng cộng:', style: TextStyle(fontSize: 16)),
+                    const Text('Suma:', style: TextStyle(fontSize: 16)),
                     Text(
                       CurrencyFormatter.formatPLN(netTotal),
                       style: const TextStyle(fontSize: 16),
@@ -896,7 +896,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Hệ số thuế:',
+                      'Współczynnik podatkowy:',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(
@@ -957,7 +957,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Địa chỉ thanh toán',
+                        'Adres płatności',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1011,7 +1011,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Text(
-          'CẬP NHẬT ĐƠN HÀNG',
+          'ZAKTUALIZUJ ZAMÓWIENIE',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
@@ -1024,7 +1024,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
     if (_editableItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đơn hàng không có sản phẩm!'),
+          content: Text('Zamówienie nie zawiera produktów!'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1040,7 +1040,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 16),
-            Text('Đang cập nhật đơn hàng...'),
+            Text('Aktualizowanie zamówienia...'),
           ],
         ),
       ),
@@ -1145,7 +1145,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Cập nhật đơn hàng thành công! Mã đơn hàng: ${updatedOrder.number}'),
+            content: Text('Zamówienie zostało pomyślnie zaktualizowane! Numer zamówienia: ${updatedOrder.number}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1156,7 +1156,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Có lỗi xảy ra khi cập nhật đơn hàng. Vui lòng thử lại!'),
+            content: Text('Wystąpił błąd podczas aktualizacji zamówienia. Spróbuj ponownie!'),
             backgroundColor: Colors.red,
           ),
         );

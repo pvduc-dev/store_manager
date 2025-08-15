@@ -59,14 +59,14 @@ class _NewProductScreenState extends State<NewProductScreen> {
   Future<void> _createProduct() async {
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tên sản phẩm')),
+        const SnackBar(content: Text('Proszę podać nazwę produktu')),
       );
       return;
     }
 
     if (priceController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập giá sản phẩm')),
+        const SnackBar(content: Text('Proszę podać cenę produktu')),
       );
       return;
     }
@@ -105,7 +105,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tạo sản phẩm thành công!')),
+          const SnackBar(content: Text('Produkt został pomyślnie utworzony!')),
         );
         context.go('/products');
       }
@@ -113,7 +113,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Lỗi khi tạo sản phẩm')));
+        ).showSnackBar(const SnackBar(content: Text('Błąd podczas tworzenia produktu')));
       }
     } finally {
       setState(() {
@@ -147,7 +147,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Lỗi khi upload ảnh')));
+          ).showSnackBar(const SnackBar(content: Text('Błąd podczas przesyłania zdjęcia')));
         }
       } finally {
         setState(() {
@@ -166,7 +166,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/products'),
         ),
-        title: const Text('Thêm sản phẩm mới'),
+        title: const Text('Dodaj nowy produkt'),
         centerTitle: true,
       ),
       body: GestureDetector(
@@ -208,7 +208,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         const Text(
-                                          'Không thể tải ảnh',
+                                          'Nie można załadować zdjęcia',
                                           style: TextStyle(color: Colors.grey),
                                         ),
                                       ],
@@ -234,7 +234,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                                           ),
                                           SizedBox(height: 8),
                                           Text(
-                                            'Đang upload...',
+                                            'Przesyłanie...',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 14,
@@ -268,7 +268,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                                         ),
                                         SizedBox(width: 4),
                                         Text(
-                                          'Đã upload',
+                                          'Przesłano',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 12,
@@ -292,7 +292,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                               OutlinedButton.icon(
                                 onPressed: _pickImage,
                                 icon: const Icon(Icons.upload),
-                                label: const Text('Tải ảnh lên'),
+                                label: const Text('Prześlij zdjęcie'),
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.grey[200],
                                   foregroundColor: Colors.grey[600],
@@ -308,7 +308,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                   controller: nameController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
-                    labelText: 'Tên sản phẩm *',
+                    labelText: 'Nazwa produktu *',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -317,7 +317,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
 
                 // Category Selector
                 Text(
-                  'Danh mục sản phẩm',
+                  'Kategoria produktu',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -327,7 +327,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 const SizedBox(height: 8),
                 CategorySelector(
                   selectedCategory: selectedCategory,
-                  hintText: 'Chọn danh mục sản phẩm',
+                  hintText: 'Wybierz kategorię produktu',
                   onCategorySelected: (category) {
                     setState(() {
                       selectedCategory = category;
@@ -353,7 +353,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                   keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
-                    labelText: 'Giá bán *',
+                    labelText: 'Cena sprzedaży *',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -389,7 +389,7 @@ class _NewProductScreenState extends State<NewProductScreen> {
                   keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
-                    labelText: 'Kho hàng',
+                    labelText: 'Magazyn',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -415,8 +415,8 @@ class _NewProductScreenState extends State<NewProductScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : isUploading
-                  ? const Text('Đang upload...')
-                  : const Text('Tạo sản phẩm'),
+                  ? const Text('Przesyłanie...')
+                  : const Text('Utwórz produkt'),
             ),
           ],
         ),

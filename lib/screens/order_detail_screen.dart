@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/utils/pdf_util.dart';
@@ -30,7 +31,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           onPressed: () => context.pop(),
         ),
         title: const Text(
-          'Chi tiết đơn hàng',
+          'Szczegóły zamówienia',
           style: TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -45,11 +46,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               color: Colors.blue,
             ),
             onPressed: () => _printInvoice(context),
-            tooltip: 'In hóa đơn',
+            tooltip: 'Drukuj fakturę',
           ),
           TextButton(
             child: const Text(
-              'Sửa',
+              'Edytuj',
               style: TextStyle(
                 color: Colors.blue,
                 fontWeight: FontWeight.w600,
@@ -72,14 +73,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           final orderId = int.tryParse(widget.orderId);
           if (orderId == null) {
             return const Center(
-              child: Text('ID đơn hàng không hợp lệ'),
+              child: Text('Nieprawidłowy ID zamówienia'),
             );
           }
 
           final order = orderProvider.getOrderById(orderId);
           if (order == null) {
             return const Center(
-              child: Text('Không tìm thấy đơn hàng'),
+              child: Text('Nie znaleziono zamówienia'),
             );
           }
 
@@ -156,15 +157,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             const SizedBox(height: 16),
                             
                             // Amount Info
-                            _buildInfoRow('Đơn giá', '', CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol), Colors.red),
-                            _buildInfoRow('Đã thanh toán', '', CurrencyFormatter.formatWithSymbol(0, order.currencySymbol), Colors.black),
+                            _buildInfoRow('Cena jednostkowa', '', CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol), Colors.red),
+                            _buildInfoRow('Zapłacono', '', CurrencyFormatter.formatWithSymbol(0, order.currencySymbol), Colors.black),
                             const SizedBox(height: 8),
-                            _buildInfoRow('Số sản phẩm', '', '${order.lineItems.length} sản phẩm', Colors.black),
+                            _buildInfoRow('Liczba produktów', '', '${order.lineItems.length} produktów', Colors.black),
                             const SizedBox(height: 8),
-                            _buildInfoRow('Thời gian đặt hàng', '', _formatDateTime(order.dateCreated), Colors.black),
+                            _buildInfoRow('Czas złożenia zamówienia', '', _formatDateTime(order.dateCreated), Colors.black),
                             const SizedBox(height: 8),
-                            _buildInfoRow('Khách hàng', '', order.billing.firstName.isNotEmpty ? order.billing.firstName : 'Khách hàng #${order.customerId}', Colors.black),
-                            _buildInfoRow('Địa chỉ nhận hàng', '', '${order.billing.address1.isNotEmpty ? order.billing.address1 : 'Chưa có địa chỉ'}  ${order.billing.address2.isNotEmpty ? order.billing.address2 : ''}', Colors.black),
+                            _buildInfoRow('Klient', '', order.billing.firstName.isNotEmpty ? order.billing.firstName : 'Klient #${order.customerId}', Colors.black),
+                            _buildInfoRow('Adres dostawy', '', '${order.billing.address1.isNotEmpty ? order.billing.address1 : 'Brak adresu'}  ${order.billing.address2.isNotEmpty ? order.billing.address2 : ''}', Colors.black),
                           ],
                         ),
                       ),
@@ -333,7 +334,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+    return DateFormat('dd.MM.yyyy HH:mm').format(dateTime);
   }
 }

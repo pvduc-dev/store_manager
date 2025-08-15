@@ -17,7 +17,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
-  Set<int> _selectedProductIds = <int>{};
+  final Set<int> _selectedProductIds = <int>{};
 
   @override
   void initState() {
@@ -29,7 +29,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Đồng bộ search controller với provider state
     final productProvider = Provider.of<ProductProvider>(
       context,
       listen: false,
@@ -46,7 +45,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   void _onSearchChanged() {
-    // Debounce search to avoid too many API calls
     final productProvider = Provider.of<ProductProvider>(
       context,
       listen: false,
@@ -57,7 +55,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   void _syncSearchController(ProductProvider productProvider) {
-    // Đồng bộ controller với provider state
     if (productProvider.searchQuery != _searchController.text) {
       _searchController.removeListener(_onSearchChanged);
       _searchController.text = productProvider.searchQuery;
@@ -79,8 +76,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
       final productProvider = Provider.of<ProductProvider>(
         context,
         listen: false,
@@ -121,16 +118,16 @@ class _ProductListScreenState extends State<ProductListScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Xác nhận xóa'),
+          title: Text('Potwierdź usunięcie'),
           content: Text(
-            'Bạn có chắc chắn muốn xóa $selectedCount sản phẩm đã chọn?',
+            'Czy na pewno chcesz usunąć $selectedCount wybranych produktów?',
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Hủy', style: TextStyle(color: Colors.grey)),
+              child: Text('Anuluj', style: TextStyle(color: Colors.blue)),
             ),
             TextButton(
               onPressed: () async {
@@ -144,12 +141,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Đã xóa $selectedCount sản phẩm'),
+                    content: Text('Usunięto $selectedCount produktów'),
                     backgroundColor: Colors.green,
                   ),
                 );
               },
-              child: Text('Xóa', style: TextStyle(color: Colors.red)),
+              child: Text('Usuń', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -169,13 +166,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
       ),
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Sắp xếp theo',
+                'Sortuj według',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 20),
@@ -210,7 +207,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
           : Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // FAB Giỏ hàng
                 Consumer<CartProvider>(
                   builder: (context, cartProvider, child) {
                     return Stack(
@@ -253,7 +249,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   },
                 ),
                 SizedBox(width: 16),
-                // FAB Thêm sản phẩm
                 FloatingActionButton(
                   onPressed: () {
                     context.push('/products/add');
@@ -293,8 +288,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           SizedBox(height: 16),
                           Text(
                             productProvider.isSearching
-                                ? 'Không tìm thấy sản phẩm nào'
-                                : 'Chưa có sản phẩm nào',
+                                ? 'Nie znaleziono produktów'
+                                : 'Nie ma jeszcze produktów',
                             style: TextStyle(
                               fontSize: 18,
                               color: Colors.grey[600],
@@ -303,7 +298,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           if (productProvider.isSearching) ...[
                             SizedBox(height: 8),
                             Text(
-                              'Thử tìm kiếm với từ khóa khác',
+                              'Spróbuj wyszukać z innymi słowami kluczowymi',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[500],
@@ -324,45 +319,56 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       productProvider.clearSearch();
                       await productProvider.loadProducts(refresh: true);
                     },
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75, // Giảm để có thêm không gian cho action section
+                    child: Stack(
+                      children: [
+                        GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: _isSelectionMode ? 1.05 : 0.88,
+                              ),
+                          itemCount: productProvider.products.length,
+                          itemBuilder: (context, index) {
+                            return ProductCard(
+                              product: productProvider.products[index],
+                              isSelectionMode: _isSelectionMode,
+                              isSelected: isProductSelected(productProvider.products[index].id),
+                              onSelectionTap: () => toggleProductSelection(productProvider.products[index].id),
+                            );
+                          },
+                        ),
+                        if (productProvider.isLoadingMore)
+                          Positioned(
+                            bottom: 20,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: CircularProgressIndicator(
+                                  strokeCap: StrokeCap.round,
+                                  strokeWidth: 4.0,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                ),
+                              ),
+                            ),
                           ),
-                      itemCount:
-                          productProvider.products.length +
-                          (productProvider.hasMoreData ? 2 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= productProvider.products.length) {
-                          if (index == productProvider.products.length) {
-                            return productProvider.isLoadingMore
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 32,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.center,
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  )
-                                : const SizedBox.shrink();
-                          } else {
-                            return const SizedBox.shrink();
-                          }
-                        }
-
-                        return ProductCard(
-                          product: productProvider.products[index],
-                          isSelectionMode: _isSelectionMode,
-                          isSelected: isProductSelected(productProvider.products[index].id),
-                          onSelectionTap: () => toggleProductSelection(productProvider.products[index].id),
-                        );
-                      },
+                      ],
                     ),
                   );
                 },
@@ -376,15 +382,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       child: Column(
         children: [
-          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  height: 48,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(24),
@@ -400,7 +405,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           style: TextStyle(fontSize: 16),
                           onSubmitted: (_) => _performSearch(),
                           decoration: InputDecoration(
-                            hintText: 'Tìm kiếm các sản phẩm',
+                            hintText: 'Wyszukaj produkty',
                             hintStyle: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 16,
@@ -437,7 +442,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(onPressed: _performSearch, child: Text('Tìm kiếm')),
+              FilledButton(onPressed: _performSearch, child: Text('Szukaj')),
             ],
           ),
         ],
@@ -446,40 +451,36 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Widget _buildFilterBar() {
+    if (_isSelectionMode) return SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          if (!_isSelectionMode) ...[
-            Consumer<ProductProvider>(
-              builder: (context, productProvider, child) {
-                return GestureDetector(
-                  onTap: () => _showSortBottomSheet(context, productProvider),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          productProvider.sortOption.displayName,
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down, size: 16),
-                      ],
-                    ),
+          Consumer<ProductProvider>(
+            builder: (context, productProvider, child) {
+              return GestureDetector(
+                onTap: () => _showSortBottomSheet(context, productProvider),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                );
-              },
-            ),
-
-            Spacer(),
-          ],
-          if (_isSelectionMode) Spacer(),
-
+                  child: Row(
+                    children: [
+                      Text(
+                        productProvider.sortOption.displayName,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down, size: 16),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          Spacer(),
           GestureDetector(
             onTap: () {
               setState(() {
@@ -500,7 +501,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   Icon(Icons.check_circle, size: 16, color: Colors.grey[600]),
                   SizedBox(width: 4),
                   Text(
-                    _isSelectionMode ? 'Hủy chọn' : 'Chọn',
+                    'Wybierz',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -524,7 +525,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         final totalCount = productProvider.products.length;
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
           decoration: BoxDecoration(
             color: Colors.blue[50],
             border: Border(
@@ -533,6 +534,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           child: Row(
             children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    clearSelection();
+                  });
+                },
+                child: Row(
+                  children: [
+                    Text(
+                      'Anuluj wybór',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Spacer(),
               if (selectedCount > 0) ...[
                 TextButton(
@@ -540,11 +561,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     clearSelection();
                   },
                   child: Text(
-                    'Bỏ chọn tất cả',
+                    'Odznacz wszystko',
                     style: TextStyle(color: Colors.red, fontSize: 14),
                   ),
                 ),
-                SizedBox(width: 8),
               ],
               TextButton(
                 onPressed: () {
@@ -556,8 +576,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 },
                 child: Text(
                   selectedCount == totalCount
-                      ? 'Bỏ chọn tất cả'
-                      : 'Chọn tất cả',
+                      ? 'Odznacz wszystko'
+                      : 'Zaznacz wszystko',
                   style: TextStyle(color: Colors.blue, fontSize: 14),
                 ),
               ),
@@ -575,7 +595,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         final totalCount = productProvider.products.length;
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
@@ -592,34 +612,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
               Icon(Icons.info_outline, color: Colors.blue, size: 20),
               SizedBox(width: 8),
               Text(
-                'Đã chọn $selectedCount/$totalCount sản phẩm',
+                'Wybrano $selectedCount/$totalCount produktów',
                 style: TextStyle(
                   color: Colors.blue[800],
                   fontWeight: FontWeight.w600,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
               ),
               Spacer(),
               Opacity(
                 opacity: selectedCount > 0 ? 1.0 : 0.0,
-                child: FilledButton.icon(
+                child: TextButton.icon(
                   onPressed: selectedCount > 0
                       ? () {
                           _showDeleteConfirmDialog();
                         }
                       : null,
-                  icon: Icon(Icons.delete, size: 18, color: Colors.white),
+                  icon: Icon(Icons.delete, size: 18, color: Colors.red),
                   label: Text(
-                    'Xóa',
+                    'Usuń',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.red,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),

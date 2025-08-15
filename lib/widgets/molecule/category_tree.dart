@@ -134,7 +134,7 @@ class _CategoryTreeState extends State<CategoryTree> {
                   Icon(Icons.category, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Text(
-                    'Chọn danh mục sản phẩm',
+                    'Wybierz kategorię produktu',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -148,7 +148,7 @@ class _CategoryTreeState extends State<CategoryTree> {
                   Icons.all_inclusive,
                   color: Colors.grey[600],
                 ),
-                title: const Text('Tất cả danh mục'),
+                title: const Text('Wszystkie kategorie'),
                 trailing: widget.selectedCategory == null
                     ? Icon(
                         Icons.check_circle,
@@ -228,7 +228,7 @@ class CategorySelector extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                selectedCategory?.name ?? hintText ?? 'Chọn danh mục',
+                selectedCategory?.name ?? hintText ?? 'Wybierz kategorię',
                 style: TextStyle(
                   color: selectedCategory != null
                       ? Colors.black87

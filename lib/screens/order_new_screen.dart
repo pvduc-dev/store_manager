@@ -31,7 +31,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
   final _taxRateFocusNode = FocusNode();
 
   // Payment method
-  String _paymentMethod = 'Thanh toán khi nhận hàng';
+  String _paymentMethod = 'Płatność przy odbiorze';
 
   // Tax rate
   double _taxRate = 1.23;
@@ -94,7 +94,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Thông tin đặt hàng'),
+        title: const Text('Informacje o zamówieniu'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -191,7 +191,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
               _fillCustomerInfo(customer);
             },
             validator: (value) =>
-                value?.isEmpty == true ? 'Vui lòng nhập tên' : null,
+                value?.isEmpty == true ? 'Proszę podać nazwę' : null,
           ),
 
           const SizedBox(height: 16),
@@ -206,8 +206,8 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
               controller: _taxCodeController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'NIP (tùy chọn)',
-                hintText: 'Nhập mã số thuế',
+                labelText: 'NIP (opcjonalnie)',
+                hintText: 'Wprowadź numer NIP',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -228,8 +228,8 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
             child: TextFormField(
               controller: _address1Controller,
               decoration: const InputDecoration(
-                labelText: 'Địa chỉ *',
-                hintText: 'Nhập địa chỉ',
+                labelText: 'Adres *',
+                hintText: 'Wprowadź adres',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -237,7 +237,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                 ),
               ),
               validator: (value) =>
-                  value?.isEmpty == true ? 'Vui lòng nhập địa chỉ' : null,
+                  value?.isEmpty == true ? 'Proszę podać adres' : null,
             ),
           ),
 
@@ -253,8 +253,8 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
-                labelText: 'Số điện thoại *',
-                hintText: 'Nhập số điện thoại',
+                labelText: 'Numer telefonu *',
+                hintText: 'Wprowadź numer telefonu',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -262,7 +262,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                 ),
               ),
               validator: (value) =>
-                  value?.isEmpty == true ? 'Vui lòng nhập số điện thoại' : null,
+                  value?.isEmpty == true ? 'Proszę podać numer telefonu' : null,
             ),
           ),
 
@@ -278,8 +278,8 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'Địa chỉ email *',
-                hintText: 'Nhập email',
+                labelText: 'Adres email *',
+                hintText: 'Wprowadź email',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -287,11 +287,11 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                 ),
               ),
               validator: (value) {
-                if (value?.isEmpty == true) return 'Vui lòng nhập email';
+                if (value?.isEmpty == true) return 'Proszę podać email';
                 if (!RegExp(
                   r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                 ).hasMatch(value!)) {
-                  return 'Email không hợp lệ';
+                  return 'Nieprawidłowy adres email';
                 }
                 return null;
               },
@@ -310,8 +310,8 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
               controller: _noteController,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Ghi chú đơn hàng (tùy chọn)',
-                hintText: 'Ghi chú về đơn hàng',
+                labelText: 'Uwagi do zamówienia (opcjonalnie)',
+                hintText: 'Uwagi dotyczące zamówienia',
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -344,7 +344,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         ),
         child: const Center(
           child: Text(
-            'Giỏ hàng trống',
+            'Koszyk jest pusty',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),
@@ -463,7 +463,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Tổng cộng:', style: TextStyle(fontSize: 16)),
+                    const Text('Suma:', style: TextStyle(fontSize: 16)),
                     Text(
                       CurrencyFormatter.formatPLN(netTotal),
                       style: const TextStyle(fontSize: 16),
@@ -495,7 +495,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Hệ số thuế:',
+                      'Współczynnik podatkowy:',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(
@@ -556,7 +556,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Địa chỉ thanh toán',
+                        'Adres płatności',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -610,7 +610,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Text(
-          'ĐẶT HÀNG',
+          'ZAMÓW',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
@@ -639,7 +639,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Giỏ hàng trống!'),
+          content: Text('Koszyk jest pusty!'),
           backgroundColor: Colors.red,
         ),
       );
@@ -655,7 +655,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 16),
-            Text('Đang tạo đơn hàng...'),
+            Text('Tworzenie zamówienia...'),
           ],
         ),
       ),
@@ -740,7 +740,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Đặt hàng thành công! Mã đơn hàng: ${order.number}'),
+            content: Text('Zamówienie zostało złożone pomyślnie! Numer zamówienia: ${order.number}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -751,7 +751,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!'),
+            content: Text('Wystąpił błąd podczas tworzenia zamówienia. Spróbuj ponownie!'),
             backgroundColor: Colors.red,
           ),
         );

@@ -117,8 +117,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                   SizedBox(height: 16),
                                   Text(
                                     orderProvider.isSearching 
-                                        ? 'Không tìm thấy đơn hàng nào'
-                                        : 'Chưa có đơn hàng nào',
+                                        ? 'Nie znaleziono zamówień'
+                                        : 'Nie ma jeszcze zamówień',
                                     style: TextStyle(
                                       fontSize: 18,
                                       color: Colors.grey[600],
@@ -127,7 +127,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                   if (orderProvider.isSearching) ...[
                                     SizedBox(height: 8),
                                     Text(
-                                      'Thử tìm kiếm với từ khóa khác',
+                                      'Spróbuj znaleźć zamówienie z innymi słowami kluczowymi',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey[500],
@@ -232,7 +232,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 Text(
                   order.billing.firstName.isNotEmpty
                       ? order.billing.firstName
-                      : 'Khách hàng #${order.customerId}',
+                      : 'Klient #${order.customerId}',
                   style: const TextStyle(fontSize: 14),
                 ),
                 Spacer(),
@@ -252,7 +252,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   ),
                 ),
                 Text(
-                  '${order.lineItems.length} sản phẩm',
+                  '${order.lineItems.length} produktów',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
@@ -292,15 +292,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Đơn hàng',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -321,7 +312,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           style: TextStyle(fontSize: 16),
                           onSubmitted: (_) => _performSearch(),
                           decoration: InputDecoration(
-                            hintText: 'Tìm kiếm theo mã đơn hàng hoặc thông tin khách hàng',
+                            hintText: 'Wyszukaj zamówienie',
                             hintStyle: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 16,
@@ -351,7 +342,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(onPressed: _performSearch, child: Text('Tìm kiếm')),
+              FilledButton(onPressed: _performSearch, child: Text('Szukaj')),
             ],
           ),
         ],

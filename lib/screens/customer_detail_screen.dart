@@ -41,7 +41,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 1,
-          title: const Text('Thông tin khách hàng'),
+          title: const Text('Informacje o kliencie'),
         ),
         body: const Center(child: Text('ID khách hàng không hợp lệ')),
       );
@@ -49,7 +49,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thông tin khách hàng'),
+        title: const Text('Informacje o kliencie'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -58,7 +58,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             onPressed: () {
               context.push('/customers/${customerId}/edit');
             },
-            child: const Text('Sửa', style: TextStyle(color: Colors.blue, fontSize: 16)),
+            child: const Text('Edytuj', style: TextStyle(color: Colors.blue, fontSize: 16)),
           ),
         ],
       ),
@@ -149,7 +149,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               child: Column(
                                 children: [
                                   Text(
-                                    'Trạng thái',
+                                    'Status',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[600],
@@ -157,8 +157,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                   ),
                                   Text(
                                     customer.isPayingCustomer
-                                        ? 'Đã mua'
-                                        : 'Chưa mua',
+                                        ? 'Kupiono'
+                                        : 'Nie kupiono',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -191,7 +191,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Thông tin liên hệ',
+                          'Informacje o kliencie',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -200,24 +200,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         if (customer.billing.company.isNotEmpty)
                           ListTile(
                             leading: const Icon(Icons.business),
-                            title: const Text('Mã số thuế (NIP)'),
+                            title: const Text('NIP'),
                             subtitle: Text(customer.billing.company),
                           ),
                         if (customer.billing.phone.isNotEmpty)
                           ListTile(
                             leading: const Icon(Icons.phone),
-                            title: const Text('Số điện thoại'),
+                            title: const Text('Telefon'),
                             subtitle: Text(customer.billing.phone),
                           ),
                         if (customer.billingAddress.isNotEmpty)
                           ListTile(
                             leading: const Icon(Icons.location_on),
-                            title: const Text('Địa chỉ'),
+                            title: const Text('Adres'),
                             subtitle: Text(customer.billingAddress),
                           ),
                         ListTile(
                           leading: const Icon(Icons.calendar_today),
-                          title: const Text('Ngày tạo'),
+                          title: const Text('Data utworzenia'),
                           subtitle: Text(_formatDate(customer.dateCreated)),
                         ),
                       ],

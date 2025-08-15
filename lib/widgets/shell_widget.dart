@@ -32,17 +32,17 @@ class ShellWidget extends StatelessWidget {
         backgroundColor: Colors.white,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Strona główna'),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2),
-            label: 'Sản phẩm',
+            label: 'Produkty',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Khách hàng',
+            label: 'Klienci',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Đơn hàng'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Cài đặt'),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Zamówienia'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ustawienia'),
         ],
         onTap: (index) {
           switch (index) {

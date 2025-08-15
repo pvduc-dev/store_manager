@@ -427,15 +427,15 @@ class Order {
 }
 
 enum OrderStatus {
-  unpaid('Chưa thanh toán'),
-  processing('Đang xử lý'),
-  paid('Đã thanh toán'),
-  completed('Hoàn thành'),
-  cancelled('Đã hủy'),
-  refunded('Đã hoàn tiền'),
-  failed('Thất bại'),
-  pending('Chờ xử lý'),
-  onHold('Tạm giữ');
+  unpaid('Nieopłacone'),
+  processing('Przetwarzanie'),
+  paid('Zapłacone'),
+  completed('Zakończone'),
+  cancelled('Anulowane'),
+  refunded('Zwrócone'),
+  failed('Nieudane'),
+  pending('Oczekujące'),
+  onHold('Wstrzymane');
 
   const OrderStatus(this.displayName);
   final String displayName;

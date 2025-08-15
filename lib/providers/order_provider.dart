@@ -187,7 +187,7 @@ class OrderProvider extends ChangeNotifier {
     required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
     String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
   }) async {
@@ -231,7 +231,7 @@ class OrderProvider extends ChangeNotifier {
     required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
     String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Thanh toán khi nhận hàng',
+    String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
   }) async {

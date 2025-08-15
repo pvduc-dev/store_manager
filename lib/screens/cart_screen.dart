@@ -30,7 +30,7 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false, // Ngăn không cho keyboard đẩy UI lên
       appBar: AppBar(
-        title: const Text('Giỏ hàng'),
+        title: const Text('Koszyk'),
         leading: IconButton(
           onPressed: () => context.go('/products'),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -100,7 +100,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Giỏ hàng trống',
+            'Koszyk jest pusty',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
@@ -109,7 +109,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Sử dụng thanh tìm kiếm ở trên để thêm sản phẩm',
+            'Użyj paska wyszukiwania powyżej, aby dodać produkty',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[500],
@@ -119,7 +119,7 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => context.go('/products'),
-            child: const Text('Xem danh sách sản phẩm'),
+            child: const Text('Zobacz listę produktów'),
           ),
         ],
       ),
@@ -137,7 +137,7 @@ class _CartScreenState extends State<CartScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${offlineCart.items.length} mặt hàng | ${offlineCart.itemsCount} sản phẩm',
+                '${offlineCart.items.length} pozycji | ${offlineCart.itemsCount} produktów',
                 style: const TextStyle(
                   fontWeight: FontWeight.w500,
                   fontSize: 16,
@@ -197,7 +197,7 @@ class _CartScreenState extends State<CartScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tổng cộng:',
+                  'Suma:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -223,7 +223,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               child: const Text(
-                'Tiến hành thanh toán',
+                'Przejdź do płatności',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
