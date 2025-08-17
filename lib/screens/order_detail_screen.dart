@@ -40,25 +40,54 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.print,
-              color: Colors.blue,
+          PopupMenuButton<String>(
+            color: Colors.white,
+            icon: const Icon(Icons.more_vert, color: Colors.blue),
+            constraints: const BoxConstraints(
+              minWidth: 100,
+              maxWidth: 240,
             ),
-            onPressed: () => _printInvoice(context),
-            tooltip: 'Drukuj fakturę',
-          ),
-          TextButton(
-            child: const Text(
-              'Edytuj',
-              style: TextStyle(
-                color: Colors.blue,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onPressed: () {
-              context.push('/orders/${widget.orderId}/edit');
+            onSelected: (value) {
+              if (value == 'print') {
+                _printInvoice(context);
+              } else if (value == 'edit') {
+                context.push('/orders/${widget.orderId}/edit');
+              } else if (value == 'print_internal') {
+                _printInvoice(context, isShowWarehouse: true);
+              }
             },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'print',
+                child: Row(
+                  children: const [
+                    Icon(Icons.print, color: Colors.blue),
+                    SizedBox(width: 4), // giảm width
+                    Text('Drukuj fakturę', overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'print_internal',
+                child: Row(
+                  children: const [
+                    Icon(Icons.print, color: Colors.red),
+                    SizedBox(width: 4), // giảm width
+                    Text('Drukuj fakturę (wewnętrzną)', overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.red),),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: const [
+                    Icon(Icons.edit, color: Colors.blue),
+                    SizedBox(width: 4), // giảm width
+                    Text('Edytuj', overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -185,7 +214,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  void _printInvoice(BuildContext context) {
+  void _printInvoice(BuildContext context, {bool isShowWarehouse = false}) {
     // Lấy thông tin đơn hàng từ provider
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final orderId = int.tryParse(widget.orderId);
@@ -194,12 +223,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final order = orderProvider.getOrderById(orderId);
     if (order == null) return;
 
-    _performPrint(order);
+    _performPrint(order, isShowWarehouse: isShowWarehouse);
   }
 
-  void _performPrint(Order order) {
+  void _performPrint(Order order, {bool isShowWarehouse = false}) {
     Printing.layoutPdf(onLayout: (format) {
-      return PdfUtil.generateOrderPdf(order);
+      return PdfUtil.generateOrderPdf(order, isShowWarehouse);
     });
   }
 

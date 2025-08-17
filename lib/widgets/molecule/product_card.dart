@@ -159,88 +159,53 @@ class _ProductCardState extends State<ProductCard> {
               children: [
                 Stack(
                   children: [
-                    Container(
-                      height: 120,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
+                    AspectRatio(
+                      aspectRatio: 1.8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          color: Colors.grey[200],
+                          image: widget.product.images.isNotEmpty
+                              ? DecorationImage(
+                                  alignment: Alignment.center,
+                                  image: CachedNetworkImageProvider(
+                                    widget.product.images.first.src ?? '',
+                                  ),
+                                  fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {
+                                    return;
+                                  },
+                                )
+                              : null,
                         ),
-                        color: Colors.grey[200],
-                        image: widget.product.images.isNotEmpty
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(
-                                  widget.product.images.first.src ?? '',
+                        child: widget.product.images.isEmpty
+                            ? Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey[400],
+                                  size: 40,
                                 ),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  return;
-                                },
                               )
                             : null,
                       ),
-                      child: widget.product.images.isEmpty
-                          ? Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.grey[400],
-                                size: 40,
-                              ),
-                            )
-                          : null,
                     ),
-                    Positioned.fill(
-                      child: Center(
-                        child: Transform.rotate(
-                          angle: -0.3,
-                          child: Text(
-                            '${widget.product.id}',
-                            style: TextStyle(
-                              color: Colors.red.withOpacity(0.8),
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(-1, -1),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(1, -1),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(-1, 1),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(1, 1),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(-1, 0),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(1, 0),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(0, -1),
-                                  blurRadius: 0,
-                                ),
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: const Offset(0, 1),
-                                  blurRadius: 0,
-                                ),
-                              ],
-                            ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${widget.product.id}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),

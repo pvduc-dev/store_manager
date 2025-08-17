@@ -6,6 +6,8 @@ import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/models/customer.dart';
 import 'package:store_manager/widgets/molecule/customer_search_box.dart';
 import 'package:store_manager/utils/currency_formatter.dart';
+import 'package:store_manager/services/product_service.dart';
+import 'package:store_manager/models/product.dart' as product_models;
 
 class OrderNewScreen extends StatefulWidget {
   const OrderNewScreen({super.key});
@@ -690,16 +692,36 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         'phone': _phoneController.text,
       };
 
-      // Prepare line items with net price (before tax)
-      final lineItems = items.map((item) {
+      // Prepare line items with net price (before tax) and product meta_data
+      final lineItems = <Map<String, dynamic>>[];
+      for (var item in items) {
         double basePrice = double.tryParse(item.price) ?? 0;
-        return {
+        
+        // Get product information to extract kho_hang from meta_data
+        final product = await ProductService.getProductById(item.productId);
+        String khoHang = '';
+        if (product != null) {
+          khoHang = product.metaData
+              .firstWhere(
+                (meta) => meta.key == 'kho_hang',
+                orElse: () => product_models.MetaData(key: 'kho_hang', value: ''),
+              )
+              .value;
+        }
+        
+        lineItems.add({
           'product_id': item.productId,
           'quantity': item.quantity,
           'total': '${basePrice * item.quantity}',
           'subtotal': '${basePrice * item.quantity}', // Subtotal equals total
-        };
-      }).toList();
+          'meta_data': [
+            {
+              'key': 'kho_hang',
+              'value': khoHang,
+            },
+          ],
+        });
+      }
 
       // Calculate tax amount 
       double taxAmount = bruttoTotal - netTotal;
@@ -728,6 +750,7 @@ class _OrderNewScreenState extends State<OrderNewScreen> {
         paymentMethodTitle: _paymentMethod,
         customerNote: customerNote,
         feeLines: taxFeeLines,
+        customerId: _selectedCustomer?.id, // Add customer_id if customer is selected
       );
 
       // Close loading dialog

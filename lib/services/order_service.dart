@@ -70,6 +70,7 @@ class OrderService {
     String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
+    int? customerId,
   }) async {
     try {
       final orderData = {
@@ -81,6 +82,11 @@ class OrderService {
         'fee_lines': feeLines ?? [],
         'customer_note': customerNote ?? '',
       };
+      
+      // Add customer_id if provided
+      if (customerId != null) {
+        orderData['customer_id'] = customerId;
+      }
 
       final response = await Dio().put(
         '$baseUrl/orders/$orderId',
@@ -105,6 +111,7 @@ class OrderService {
     String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
+    int? customerId,
   }) async {
     try {
       final orderData = {
@@ -118,6 +125,11 @@ class OrderService {
         'fee_lines': feeLines ?? [],
         'customer_note': customerNote ?? '',
       };
+      
+      // Add customer_id if provided
+      if (customerId != null) {
+        orderData['customer_id'] = customerId;
+      }
 
       final response = await Dio().post(
         '$baseUrl/orders',
@@ -132,5 +144,14 @@ class OrderService {
       }
       return null;
     }
+  }
+
+  static Future<List<Order>> getOrdersByCustomerId(int customerId) async {
+    final response = await Dio().get(
+      '$baseUrl/orders?customer_id=$customerId',
+      options: Options(headers: {'Authorization': basicAuth})
+    );
+    final List<dynamic> data = response.data as List<dynamic>;
+    return data.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

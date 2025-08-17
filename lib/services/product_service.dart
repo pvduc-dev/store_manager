@@ -152,6 +152,25 @@ class ProductService {
     }
   }
 
+  static Future<Product?> getProductById(int productId) async {
+    try {
+      final response = await Dio().get(
+        '$baseUrl/products/$productId',
+        options: Options(headers: {'Authorization': basicAuth}),
+      );
+
+      if (response.statusCode == 200) {
+        return Product.fromJson(response.data);
+      } else {
+        print('Error fetching product by ID: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception while fetching product by ID: $e');
+      return null;
+    }
+  }
+
   static Future<Product?> deleteProduct(List<int> productIds) async {
     try {
       final response = await Dio().post('$baseUrl/products/batch',

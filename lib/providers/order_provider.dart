@@ -190,6 +190,7 @@ class OrderProvider extends ChangeNotifier {
     String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
+    int? customerId,
   }) async {
     try {
       final updatedOrder = await OrderService.updateOrder(
@@ -200,6 +201,7 @@ class OrderProvider extends ChangeNotifier {
         paymentMethodTitle: paymentMethodTitle,
         customerNote: customerNote,
         feeLines: feeLines ?? [],
+        customerId: customerId,
       );
       
       if (updatedOrder != null) {
@@ -234,6 +236,7 @@ class OrderProvider extends ChangeNotifier {
     String paymentMethodTitle = 'Płatność przy odbiorze',
     String? customerNote,
     List<Map<String, dynamic>>? feeLines,
+    int? customerId,
   }) async {
     try {
       final newOrder = await OrderService.createOrder(
@@ -243,6 +246,7 @@ class OrderProvider extends ChangeNotifier {
         paymentMethodTitle: paymentMethodTitle,
         customerNote: customerNote,
         feeLines: feeLines ?? [],
+        customerId: customerId,
       );
       
       if (newOrder != null) {

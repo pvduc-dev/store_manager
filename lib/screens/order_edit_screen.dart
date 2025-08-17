@@ -7,7 +7,7 @@ import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/models/customer.dart';
 import 'package:store_manager/models/order.dart';
 import 'package:store_manager/models/offline_cart.dart';
-import 'package:store_manager/models/product.dart';
+import 'package:store_manager/models/product.dart' as product_models;
 import 'package:store_manager/services/product_service.dart';
 import 'package:store_manager/widgets/molecule/customer_search_box.dart';
 import 'package:store_manager/widgets/molecule/offline_cart_item.dart';
@@ -57,7 +57,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   List<OfflineCartItem> _editableItems = [];
   
   // Product search state
-  List<Product> _searchResults = [];
+  List<product_models.Product> _searchResults = [];
   bool _showSearchResults = false;
   bool _isSearching = false;
   Timer? _searchDebounce;
@@ -246,7 +246,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   }
   
   // Add product from search results
-  void _addProductFromSearch(Product product) {
+  void _addProductFromSearch(product_models.Product product) {
     _addProductToOrder(
       product.id,
       product.name,
@@ -1075,20 +1075,39 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         'phone': _phoneController.text,
       };
 
-      // Prepare line items from editable items
+      // Prepare line items from editable items with warehouse information
       // WooCommerce logic:
       // - Items with 'id' and quantity > 0: Will be updated
       // - Items with 'id' and quantity = 0: Will be deleted
       // - Items without 'id' and quantity > 0: Will be created as new
-      final lineItems = _editableItems.map((item) {
+      final lineItems = <Map<String, dynamic>>[];
+      for (var item in _editableItems) {
         double price = double.tryParse(item.price) ?? 0;
         int quantity = item.isDeleted ? 0 : item.quantity; // Set quantity = 0 for deleted items
+        
+        // Get product information to extract kho_hang from meta_data
+        final product = await ProductService.getProductById(item.productId);
+        String khoHang = '';
+        if (product != null) {
+          khoHang = product.metaData
+              .firstWhere(
+                (meta) => meta.key == 'kho_hang',
+                orElse: () => product_models.MetaData(key: 'kho_hang', value: ''),
+              )
+              .value;
+        }
         
         final lineItem = <String, dynamic>{
           'product_id': item.productId,
           'quantity': quantity,
           'total': (price * quantity).toStringAsFixed(2),
           'subtotal': (price * quantity).toStringAsFixed(2), // Subtotal equals total
+          'meta_data': [
+            {
+              'key': 'kho_hang',
+              'value': khoHang,
+            },
+          ],
         };
         
         // Include line item ID if this is an existing item (for update/delete)
@@ -1097,8 +1116,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         }
         // If lineItemId is null, this is a new item and WooCommerce will create it
         
-        return lineItem;
-      }).toList();
+        lineItems.add(lineItem);
+      }
 
       // Calculate tax amount 
       double taxAmount = bruttoTotal - netTotal;
@@ -1136,6 +1155,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         paymentMethodTitle: _paymentMethod,
         customerNote: customerNote,
         feeLines: taxFeeLines,
+        customerId: _selectedCustomer?.id, // Add customer_id if customer is selected
       );
 
       // Close loading dialog
