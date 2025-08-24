@@ -74,10 +74,17 @@ class ProductService {
   }
 
   static Future<int?> uploadImage(File imageFile) async {
+    print('📷 ProductService: Bắt đầu upload ảnh...');
+    print('📁 File path: ${imageFile.path}');
+    
     try {
+      print('📖 Đọc bytes từ file...');
       final imageBytes = await imageFile.readAsBytes();
       final fileName = imageFile.path.split('/').last;
+      print('📎 File name: $fileName');
+      print('📏 File size: ${imageBytes.length} bytes');
 
+      print('📤 Gửi POST request upload ảnh...');
       final imageUploadResponse = await Dio().post(
         'https://kochamtoys.pl/wp-json/wp/v2/media',
         options: Options(
@@ -90,20 +97,37 @@ class ProductService {
         data: Stream.fromIterable(imageBytes.map((e) => [e])),
       );
 
+      print('📥 Upload response: ${imageUploadResponse.statusCode}');
+      
       if (imageUploadResponse.statusCode == 201) {
-        return imageUploadResponse.data['id'];
+        final imageId = imageUploadResponse.data['id'];
+        print('✅ Upload ảnh thành công! Image ID: $imageId');
+        return imageId;
       } else {
-        print('Error uploading image: ${imageUploadResponse.statusCode}');
+        print('❌ Lỗi upload ảnh - Status: ${imageUploadResponse.statusCode}');
+        print('📋 Response data: ${imageUploadResponse.data}');
         return null;
       }
     } catch (e) {
-      print('Exception while uploading image: $e');
+      print('❌ Exception khi upload ảnh: $e');
+      if (e is DioException) {
+        print('🔍 DioException details:');
+        print('  - Type: ${e.type}');
+        print('  - Message: ${e.message}');
+        print('  - Response: ${e.response?.data}');
+        print('  - Status Code: ${e.response?.statusCode}');
+      }
       return null;
     }
   }
 
   static Future<Product?> createProduct(Map<String, dynamic> data) async {
+    print('🌐 ProductService: Bắt đầu gọi API tạo sản phẩm...');
+    print('📡 URL: $baseUrl/products');
+    print('📦 Data: $data');
+    
     try {
+      print('📤 Gửi POST request...');
       final response = await Dio().post(
         '$baseUrl/products',
         options: Options(
@@ -115,14 +139,26 @@ class ProductService {
         data: data,
       );
 
+      print('📥 Nhận được response: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
+        print('✅ Tạo sản phẩm thành công!');
+        print('📋 Response data: ${response.data}');
         return Product.fromJson(response.data);
       } else {
-        print('Error creating product: ${response.statusCode}');
+        print('❌ Lỗi tạo sản phẩm - Status: ${response.statusCode}');
+        print('📋 Response data: ${response.data}');
         return null;
       }
     } catch (e) {
-      print('Exception while creating product: $e');
+      print('❌ Exception khi tạo sản phẩm: $e');
+      if (e is DioException) {
+        print('🔍 DioException details:');
+        print('  - Type: ${e.type}');
+        print('  - Message: ${e.message}');
+        print('  - Response: ${e.response?.data}');
+        print('  - Status Code: ${e.response?.statusCode}');
+      }
       return null;
     }
   }

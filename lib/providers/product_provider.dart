@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:store_manager/models/product.dart' as models;
 import 'package:store_manager/models/category.dart';
@@ -28,8 +29,18 @@ class ProductProvider extends ChangeNotifier {
   String _searchQuery = '';
   ProductSortOption _sortOption = ProductSortOption.newest;
   Category? _selectedCategory;
+  
+  // Loading product state
+  models.Product? _loadingProduct;
+  int _loadingProductTempId = -1;
 
-  List<models.Product> get products => _products;
+  List<models.Product> get products {
+    List<models.Product> result = List.from(_products);
+    if (_loadingProduct != null) {
+      result.insert(0, _loadingProduct!);
+    }
+    return result;
+  }
 
   Map<int, models.Product> get productsMap => _productsMap;
 
@@ -41,6 +52,8 @@ class ProductProvider extends ChangeNotifier {
   ProductSortOption get sortOption => _sortOption;
   Category? get selectedCategory => _selectedCategory;
   bool get hasFilter => _selectedCategory != null;
+  bool get hasLoadingProduct => _loadingProduct != null;
+  models.Product? get loadingProduct => _loadingProduct;
 
   Future<void> loadProducts({bool refresh = false}) async {
     if (refresh) {
@@ -241,5 +254,80 @@ class ProductProvider extends ChangeNotifier {
 
   models.Product? getProductById(int id) {
     return _productsMap[id];
+  }
+
+  // Loading product methods
+  void addLoadingProduct(Map<String, dynamic> productData) {
+    print('🎯 ProductProvider: Thêm loading product...');
+    print('📝 Product name: ${productData['name']}');
+    
+    // Tạo temporary product với ID âm để phân biệt
+    _loadingProduct = models.Product(
+      id: _loadingProductTempId,
+      name: productData['name'] ?? '',
+      description: productData['description'] ?? '',
+      metaData: (productData['meta_data'] as List?)
+          ?.map((meta) => models.MetaData(
+                key: meta['key'] ?? '',
+                value: meta['value'] ?? '',
+              ))
+          .toList() ?? [],
+      images: [],
+      categories: (productData['categories'] as List?)
+          ?.map((cat) => models.ProductCategory(
+                id: cat['id'] ?? 0,
+                name: cat['name'] ?? '',
+              ))
+          .toList() ?? [],
+    );
+    print('✅ Loading product được tạo với ID: ${_loadingProduct?.id}');
+    notifyListeners();
+    print('🔄 Đã notify listeners');
+  }
+
+  Future<void> createProductFromLoading(Map<String, dynamic> productData) async {
+    print('🔥 ProductProvider: Bắt đầu tạo sản phẩm từ loading...');
+    print('📋 ProductData: $productData');
+    
+    try {
+      print('📞 Gọi ProductService.createProduct...');
+      final product = await ProductService.createProduct(productData);
+      print('📦 Nhận được product từ service: ${product?.name} (ID: ${product?.id})');
+      
+      if (product != null) {
+        print('✅ Sản phẩm tạo thành công, cập nhật state...');
+        // Xóa loading product
+        _loadingProduct = null;
+        
+        // Thêm product thực vào đầu danh sách
+        _products.insert(0, product);
+        _productsMap[product.id] = product;
+        print('🔄 Notify listeners...');
+        notifyListeners();
+        print('✅ ProductProvider: Hoàn thành tạo sản phẩm!');
+      } else {
+        print('❌ ProductService trả về null');
+        _loadingProduct = null;
+        notifyListeners();
+      }
+    } catch (e, stackTrace) {
+      print('❌ ProductProvider: Lỗi tạo sản phẩm: $e');
+      print('📍 Stack trace: $stackTrace');
+      // Nếu lỗi, chỉ xóa loading product
+      _loadingProduct = null;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  void removeLoadingProduct() {
+    if (_loadingProduct != null) {
+      _loadingProduct = null;
+      notifyListeners();
+    }
+  }
+
+  bool isLoadingProduct(int productId) {
+    return _loadingProduct != null && _loadingProduct!.id == productId;
   }
 }

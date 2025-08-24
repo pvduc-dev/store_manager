@@ -1,3 +1,4 @@
+import 'package:flashy_flushbar/flashy_flushbar_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -74,6 +75,7 @@ class StoreManagerApp extends StatelessWidget {
             textTheme: GoogleFonts.robotoTextTheme(),
             colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF00BABA)),
           ),
+          builder: FlashyFlushbarProvider.init(),
         ),
       ),
     );

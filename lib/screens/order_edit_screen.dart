@@ -577,11 +577,6 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
               ),
               validator: (value) {
                 if (value?.isEmpty == true) return 'Proszę podać email';
-                if (!RegExp(
-                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                ).hasMatch(value!)) {
-                  return 'Nieprawidłowy adres email';
-                }
                 return null;
               },
             ),

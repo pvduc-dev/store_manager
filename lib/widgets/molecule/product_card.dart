@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/models/product.dart' as product_models;
 import 'package:store_manager/providers/cart_provider.dart';
+import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/utils/currency_formatter.dart';
 
 class ProductCard extends StatefulWidget {
@@ -125,8 +126,15 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
+    final productProvider = context.watch<ProductProvider>();
+    final isLoadingProduct = productProvider.isLoadingProduct(widget.product.id);
+    
     return InkWell(
       onTap: () {
+        if (isLoadingProduct) {
+          // Không cho phép tap vào loading product
+          return;
+        }
         if (widget.isSelectionMode) {
           widget.onSelectionTap();
         } else {
@@ -363,7 +371,7 @@ class _ProductCardState extends State<ProductCard> {
             ),
           ),
           
-          if (widget.isSelectionMode)
+          if (widget.isSelectionMode && !isLoadingProduct)
             Positioned(
               top: 16,
               right: 16,
@@ -383,6 +391,37 @@ class _ProductCardState extends State<ProductCard> {
                   child: widget.isSelected
                       ? const Icon(Icons.check, color: Colors.white, size: 16)
                       : null,
+                ),
+              ),
+            ),
+          
+          // Loading overlay
+          if (isLoadingProduct)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Colors.blue,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Đang tạo...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
