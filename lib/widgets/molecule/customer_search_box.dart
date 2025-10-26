@@ -285,9 +285,9 @@ class _CustomerSearchBoxState extends State<CustomerSearchBox> {
                                       color: Colors.grey[600],
                                     ),
                                   ),
-                                if (customer.billingPhone.isNotEmpty)
+                                if (customer.phone.isNotEmpty)
                                   Text(
-                                    customer.billingPhone,
+                                    customer.phone,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[600],

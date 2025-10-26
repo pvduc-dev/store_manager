@@ -2,15 +2,17 @@ import 'package:dio/dio.dart';
 import 'package:store_manager/models/order.dart';
 
 class OrderService {
-  static const String baseUrl = 'https://kochamtoys.pl/wp-json/wc/v3';
+  static const String baseUrl = 'https://kochamtoys.pl/wp-json/v1';
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
   static Future<List<Order>> getOrders({int page = 1, int perPage = 20}) async {
     final response = await Dio().get(
-      '$baseUrl/orders?per_page=$perPage&page=$page&orderby=date&order=desc',
+      '$baseUrl/orders?page=$page&per_page=$perPage',
       options: Options(headers: {'Authorization': basicAuth})
     );
+    
+    // Response is direct array
     final List<dynamic> data = response.data as List<dynamic>;
     return data.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -22,21 +24,19 @@ class OrderService {
     int perPage = 20,
   }) async {
     final response = await Dio().get(
-      '$baseUrl/orders?search=$search&per_page=$perPage&page=$page&orderby=date&order=desc',
+      '$baseUrl/orders?search=$search&page=$page&per_page=$perPage',
       options: Options(headers: {'Authorization': basicAuth})
     );
     final List<dynamic> data = response.data as List<dynamic>;
     return data.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Lấy chi tiết order theo ID
+  /// Lấy chi tiết order theo ID - Không cần nữa vì list API đã có full data
   static Future<Order?> getOrderById(int orderId) async {
     try {
-      final response = await Dio().get(
-        '$baseUrl/orders/$orderId',
-        options: Options(headers: {'Authorization': basicAuth})
-      );
-      return Order.fromJson(response.data as Map<String, dynamic>);
+      // Fallback nếu cần - gọi list API và filter
+      final orders = await getOrders(perPage: 100);
+      return orders.firstWhere((order) => order.id == orderId);
     } catch (e) {
       print('Error fetching order $orderId: $e');
       return null;
@@ -61,32 +61,21 @@ class OrderService {
     }
   }
 
-  /// Cập nhật đơn hàng
+  /// Cập nhật đơn hàng với format mới
   static Future<Order?> updateOrder({
     required int orderId,
-    required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
-    String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Płatność przy odbiorze',
-    String? customerNote,
-    List<Map<String, dynamic>>? feeLines,
-    int? customerId,
+    required Map<String, dynamic> customer,
+    required String customerNote,
+    required double taxFee,
   }) async {
     try {
       final orderData = {
-        'payment_method': paymentMethod,
-        'payment_method_title': paymentMethodTitle,
-        'billing': billingInfo,
-        'shipping': billingInfo, // Use billing info for shipping too
         'line_items': lineItems,
-        'fee_lines': feeLines ?? [],
-        'customer_note': customerNote ?? '',
+        'customer': customer,
+        'customer_note': customerNote,
+        'tax_fee': taxFee,
       };
-      
-      // Add customer_id if provided
-      if (customerId != null) {
-        orderData['customer_id'] = customerId;
-      }
 
       final response = await Dio().put(
         '$baseUrl/orders/$orderId',
@@ -103,39 +92,28 @@ class OrderService {
     }
   }
 
-  /// Tạo đơn hàng mới
+  /// Tạo đơn hàng mới với API custom structure
   static Future<Order?> createOrder({
-    required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
-    String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Płatność przy odbiorze',
-    String? customerNote,
-    List<Map<String, dynamic>>? feeLines,
-    int? customerId,
+    required Map<String, dynamic> customer,
+    required String customerNote,
+    required double taxFee,
   }) async {
     try {
       final orderData = {
-        'payment_method': paymentMethod,
-        'payment_method_title': paymentMethodTitle,
-        'set_paid': false,
-        'status': 'processing',
-        'billing': billingInfo,
-        'shipping': billingInfo, // Use billing info for shipping too
         'line_items': lineItems,
-        'fee_lines': feeLines ?? [],
-        'customer_note': customerNote ?? '',
+        'customer': customer,
+        'customer_note': customerNote,
+        'tax_fee': taxFee,
       };
-      
-      // Add customer_id if provided
-      if (customerId != null) {
-        orderData['customer_id'] = customerId;
-      }
 
       final response = await Dio().post(
         '$baseUrl/orders',
         data: orderData,
         options: Options(headers: {'Authorization': basicAuth})
       );
+      
+      // API trả về order data trực tiếp (giống GET format)
       return Order.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       print('Error creating order: $e');
@@ -148,7 +126,7 @@ class OrderService {
 
   static Future<List<Order>> getOrdersByCustomerId(int customerId) async {
     final response = await Dio().get(
-      '$baseUrl/orders?customer_id=$customerId',
+      '$baseUrl/orders?customer=$customerId',
       options: Options(headers: {'Authorization': basicAuth})
     );
     final List<dynamic> data = response.data as List<dynamic>;

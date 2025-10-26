@@ -4,12 +4,13 @@ import '../models/product.dart';
 
 class ProductService {
   static const String baseUrl = 'https://kochamtoys.pl/wp-json/wc/v3';
+  static const String baseUrlV9 = 'https://kochamtoys.pl/wp-json/wc/v9';
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
   static Future<List<Product>> getProducts({
     int page = 1, 
-    int perPage = 100,
+    int perPage = 40,
     String orderby = 'date',
     String order = 'desc',
     int? categoryId,
@@ -73,18 +74,13 @@ class ProductService {
     }
   }
 
+  /// Upload image separately to WordPress media library
+  /// Note: This method is now optional since createProduct() can handle image upload directly
   static Future<int?> uploadImage(File imageFile) async {
-    print('📷 ProductService: Bắt đầu upload ảnh...');
-    print('📁 File path: ${imageFile.path}');
-    
     try {
-      print('📖 Đọc bytes từ file...');
       final imageBytes = await imageFile.readAsBytes();
       final fileName = imageFile.path.split('/').last;
-      print('📎 File name: $fileName');
-      print('📏 File size: ${imageBytes.length} bytes');
 
-      print('📤 Gửi POST request upload ảnh...');
       final imageUploadResponse = await Dio().post(
         'https://kochamtoys.pl/wp-json/wp/v2/media',
         options: Options(
@@ -96,38 +92,222 @@ class ProductService {
         ),
         data: Stream.fromIterable(imageBytes.map((e) => [e])),
       );
-
-      print('📥 Upload response: ${imageUploadResponse.statusCode}');
       
       if (imageUploadResponse.statusCode == 201) {
         final imageId = imageUploadResponse.data['id'];
-        print('✅ Upload ảnh thành công! Image ID: $imageId');
         return imageId;
       } else {
-        print('❌ Lỗi upload ảnh - Status: ${imageUploadResponse.statusCode}');
-        print('📋 Response data: ${imageUploadResponse.data}');
+        print('Error uploading image: ${imageUploadResponse.statusCode}');
         return null;
       }
     } catch (e) {
-      print('❌ Exception khi upload ảnh: $e');
+      print('Exception while uploading image: $e');
       if (e is DioException) {
-        print('🔍 DioException details:');
-        print('  - Type: ${e.type}');
-        print('  - Message: ${e.message}');
-        print('  - Response: ${e.response?.data}');
-        print('  - Status Code: ${e.response?.statusCode}');
+        print('DioException: ${e.response?.data}');
       }
       return null;
     }
   }
 
-  static Future<Product?> createProduct(Map<String, dynamic> data) async {
-    print('🌐 ProductService: Bắt đầu gọi API tạo sản phẩm...');
-    print('📡 URL: $baseUrl/products');
-    print('📦 Data: $data');
-    
+  /// Create product using multipart/form-data (matches the CURL command format)
+  /// 
+  /// Example usage:
+  /// ```dart
+  /// final product = await ProductService.createProduct(
+  ///   name: "san pham test12",
+  ///   price: "513", 
+  ///   step: "12",
+  ///   warehouse: "BN-SOC",
+  ///   imageFile: File("/path/to/image.png"),
+  ///   carton: "carton test",
+  ///   categoryId: "27",
+  /// );
+  /// ```
+  /// 
+  /// This matches the CURL command:
+  /// ```bash
+  /// curl --location 'https://kochamtoys.pl/wp-json/wc/v9/products' \
+  /// --header 'Authorization: Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q' \
+  /// --form 'name="san pham test12"' \
+  /// --form 'price="513"' \
+  /// --form 'step="12"' \
+  /// --form 'warehouse="BN-SOC"' \
+  /// --form 'image=@"/Users/dung.du/Downloads/chart (4).png"' \
+  /// --form 'carton="carton test"' \
+  /// --form 'categoryId="27"'
+  /// ```
+  static Future<Product?> createProduct({
+    required String name,
+    required String price,
+    String? step,
+    String? warehouse,
+    File? imageFile,
+    String? carton,
+    String? categoryId,
+  }) async {
     try {
-      print('📤 Gửi POST request...');
+      // Create FormData for multipart/form-data request
+      final formData = FormData();
+      
+      // Add required fields
+      formData.fields.add(MapEntry('name', name));
+      formData.fields.add(MapEntry('price', price));
+      
+      // Add optional fields
+      if (step != null && step.isNotEmpty) {
+        formData.fields.add(MapEntry('step', step));
+      }
+      if (warehouse != null && warehouse.isNotEmpty) {
+        formData.fields.add(MapEntry('warehouse', warehouse));
+      }
+      if (carton != null && carton.isNotEmpty) {
+        formData.fields.add(MapEntry('carton', carton));
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        formData.fields.add(MapEntry('categoryId', categoryId));
+      }
+      
+      // Add image file if provided
+      if (imageFile != null) {
+        final fileName = imageFile.path.split('/').last;
+        formData.files.add(MapEntry(
+          'image',
+          await MultipartFile.fromFile(
+            imageFile.path,
+            filename: fileName,
+          ),
+        ));
+      }
+
+      final response = await Dio().post(
+        '$baseUrlV9/products',
+        options: Options(
+          headers: {
+            'Authorization': basicAuth,
+            // Don't set Content-Type - Dio will set it automatically for FormData
+          },
+        ),
+        data: formData,
+      );
+
+      if (response.statusCode == 201) {
+        return Product.fromJson(response.data);
+      } else {
+        print('Error creating product: ${response.statusCode}');
+        print('Response data: ${response.data}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception while creating product: $e');
+      if (e is DioException) {
+        print('DioException: ${e.response?.data}');
+      }
+      return null;
+    }
+  }
+
+  /// Update product using multipart/form-data (matches the CURL command format)
+  /// 
+  /// Example usage:
+  /// ```dart
+  /// final product = await ProductService.updateProduct(
+  ///   productId: 3981,
+  ///   name: "san pham test13",
+  ///   price: "513",
+  ///   step: "12",
+  ///   warehouse: "BN-SOC",
+  ///   carton: "carton test",
+  ///   categoryId: "27",
+  ///   imageFile: File("/path/to/image.png"), // Optional
+  /// );
+  /// ```
+  /// 
+  /// This matches the CURL command:
+  /// ```bash
+  /// curl --location 'https://kochamtoys.pl/wp-json/wc/v9/products/3981/update' \
+  /// --header 'Authorization: Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q' \
+  /// --form 'name="san pham test13"' \
+  /// --form 'price="513"' \
+  /// --form 'step="12"' \
+  /// --form 'warehouse="BN-SOC"' \
+  /// --form 'carton="carton test"' \
+  /// --form 'categoryId="27"'
+  /// ```
+  static Future<Product?> updateProduct({
+    required int productId,
+    required String name,
+    required String price,
+    String? step,
+    String? warehouse,
+    File? imageFile,
+    String? carton,
+    String? categoryId,
+  }) async {
+    try {
+      // Create FormData for multipart/form-data request
+      final formData = FormData();
+      
+      // Add required fields
+      formData.fields.add(MapEntry('name', name));
+      formData.fields.add(MapEntry('price', price));
+      
+      // Add optional fields
+      if (step != null && step.isNotEmpty) {
+        formData.fields.add(MapEntry('step', step));
+      }
+      if (warehouse != null && warehouse.isNotEmpty) {
+        formData.fields.add(MapEntry('warehouse', warehouse));
+      }
+      if (carton != null && carton.isNotEmpty) {
+        formData.fields.add(MapEntry('carton', carton));
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        formData.fields.add(MapEntry('categoryId', categoryId));
+      }
+      
+      // Add image file if provided
+      if (imageFile != null) {
+        final fileName = imageFile.path.split('/').last;
+        formData.files.add(MapEntry(
+          'image',
+          await MultipartFile.fromFile(
+            imageFile.path,
+            filename: fileName,
+          ),
+        ));
+      }
+
+      final response = await Dio().post(
+        '$baseUrlV9/products/$productId/update',
+        options: Options(
+          headers: {
+            'Authorization': basicAuth,
+            // Don't set Content-Type - Dio will set it automatically for FormData
+          },
+        ),
+        data: formData,
+      );
+
+      if (response.statusCode == 200) {
+        return Product.fromJson(response.data);
+      } else {
+        print('Error updating product: ${response.statusCode}');
+        print('Response data: ${response.data}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception while updating product: $e');
+      if (e is DioException) {
+        print('DioException: ${e.response?.data}');
+      }
+      return null;
+    }
+  }
+
+  /// Legacy method - create product using JSON data (kept for backward compatibility)
+  @deprecated
+  static Future<Product?> createProductLegacy(Map<String, dynamic> data) async {
+    try {
       final response = await Dio().post(
         '$baseUrl/products',
         options: Options(
@@ -139,31 +319,21 @@ class ProductService {
         data: data,
       );
 
-      print('📥 Nhận được response: ${response.statusCode}');
-      
       if (response.statusCode == 201) {
-        print('✅ Tạo sản phẩm thành công!');
-        print('📋 Response data: ${response.data}');
         return Product.fromJson(response.data);
       } else {
-        print('❌ Lỗi tạo sản phẩm - Status: ${response.statusCode}');
-        print('📋 Response data: ${response.data}');
+        print('Error creating product: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('❌ Exception khi tạo sản phẩm: $e');
-      if (e is DioException) {
-        print('🔍 DioException details:');
-        print('  - Type: ${e.type}');
-        print('  - Message: ${e.message}');
-        print('  - Response: ${e.response?.data}');
-        print('  - Status Code: ${e.response?.statusCode}');
-      }
+      print('Exception while creating product: $e');
       return null;
     }
   }
 
-  static Future<Product?> updateProduct(Map<String, dynamic> data) async {
+  /// Legacy method - update product using JSON data (kept for backward compatibility)
+  @deprecated
+  static Future<Product?> updateProductLegacy(Map<String, dynamic> data) async {
     try {
       final response = await Dio().put(
         '$baseUrl/products/${data['id']}',

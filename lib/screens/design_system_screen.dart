@@ -13,12 +13,10 @@ class DesignSystemScreen extends StatelessWidget {
           children: [
             AppTextField(
               label: 'Text Field',
-              hint: 'Text Field',
               controller: TextEditingController(),
             ),
             AppTextField(
               label: 'Text Field',
-              hint: 'Text Field',
               controller: TextEditingController(),
             ),
           ],

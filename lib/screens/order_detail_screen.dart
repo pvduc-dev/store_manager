@@ -51,6 +51,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               if (value == 'print') {
                 _printInvoice(context);
               } else if (value == 'edit') {
+                // Navigate to edit screen with orderId
                 context.push('/orders/${widget.orderId}/edit');
               } else if (value == 'print_internal') {
                 _printInvoice(context, isShowWarehouse: true);
@@ -186,15 +187,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             const SizedBox(height: 16),
                             
                             // Amount Info
-                            _buildInfoRow('Cena jednostkowa', '', CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol), Colors.red),
-                            _buildInfoRow('Zapłacono', '', CurrencyFormatter.formatWithSymbol(0, order.currencySymbol), Colors.black),
+                            _buildInfoRow('Cena jednostkowa', '', CurrencyFormatter.formatWithSymbol(order.total, 'zł'), Colors.red),
+                            _buildInfoRow('Podatek', '', CurrencyFormatter.formatWithSymbol(order.taxFeeAmount, 'zł'), Colors.orange),
                             const SizedBox(height: 8),
                             _buildInfoRow('Liczba produktów', '', '${order.lineItems.length} produktów', Colors.black),
                             const SizedBox(height: 8),
                             _buildInfoRow('Czas złożenia zamówienia', '', _formatDateTime(order.dateCreated), Colors.black),
                             const SizedBox(height: 8),
                             _buildInfoRow('Klient', '', order.billing.firstName.isNotEmpty ? order.billing.firstName : 'Klient #${order.customerId}', Colors.black),
-                            _buildInfoRow('Adres dostawy', '', '${order.billing.address1.isNotEmpty ? order.billing.address1 : 'Brak adresu'}  ${order.billing.address2.isNotEmpty ? order.billing.address2 : ''}', Colors.black),
+                            _buildInfoRow('Adres dostawy', '', order.billing.address.isNotEmpty ? order.billing.address : 'Brak adresu', Colors.black),
                           ],
                         ),
                       ),
@@ -324,7 +325,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  item.sku,
+                  item.warehouse,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -347,7 +348,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                CurrencyFormatter.formatPLN(item.price),
+                CurrencyFormatter.formatPLN(item.price / item.quantity),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

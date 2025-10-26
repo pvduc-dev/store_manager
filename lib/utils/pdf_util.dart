@@ -39,51 +39,30 @@ class PdfUtil {
     return imageMap;
   }
 
-  // Helper function để lấy thông tin kho hàng từ meta_data
+  // Helper function để lấy thông tin kho hàng từ warehouse field
   static String _getWarehouseInfo(OrderItem item) {
-    for (final meta in item.metaData) {
-      if (meta['key'] == 'kho_hang') {
-        return meta['value']?.toString() ?? '';
-      }
-    }
-    return ''; // Trả về chuỗi rỗng nếu không tìm thấy
+    return item.warehouse;
   }
 
   // Helper function để tính toán giá netto và brutto
   static Map<String, double> _calculateNettoAndBrutto(Order order) {
-    final shippingTotal = double.tryParse(order.shippingTotal) ?? 0.0;
-    final shippingTax = double.tryParse(order.shippingTax) ?? 0.0;
-    
-    // Tìm thuế trong fee_lines
-    double taxFromFeeLines = 0.0;
-    for (final feeLine in order.feeLines) {
-      if (feeLine.name.toLowerCase().contains('tax')) {
-        taxFromFeeLines += double.tryParse(feeLine.total) ?? 0.0;
-      }
-    }
-    
-    // Tính tổng subtotal từ line items (giá netto của sản phẩm)
+    // Simplified calculation - no shipping or fee lines in new model
     double lineItemsSubtotal = 0.0;
     for (final lineItem in order.lineItems) {
-      lineItemsSubtotal += double.tryParse(lineItem.subtotal) ?? 0.0;
+      lineItemsSubtotal += lineItem.total; // Use total getter
     }
     
-    // Logic tính toán:
-    // - lineItemsSubtotal = giá netto của sản phẩm
-    // - taxFromFeeLines = thuế được thêm qua fee_lines
-    // - shippingTotal = phí vận chuyển
-    // - total = tổng cuối cùng (lineItemsSubtotal + taxFromFeeLines + shippingTotal)
-    
+    // Simplified calculation for new model
     final netto = lineItemsSubtotal;
-    final totalTax = taxFromFeeLines;
-    final brutto = netto + totalTax + shippingTotal;
+    final totalTax = order.taxFeeAmount;
+    final brutto = order.total;
     
     return {
       'netto': netto,
       'brutto': brutto,
       'totalTax': totalTax,
-      'shippingTotal': shippingTotal,
-      'shippingTax': shippingTax,
+      'shippingTotal': 0.0,
+      'shippingTax': 0.0,
     };
   }
 
@@ -429,14 +408,14 @@ class PdfUtil {
                   'Email: ${order.billing.email}',
                   style: pw.TextStyle(font: ttf),
                 ),
-              if (order.billing.company.isNotEmpty)
+              if (order.billing.nip.isNotEmpty)
                 pw.Text(
-                  'NIP: ${order.billing.company}',
+                  'NIP: ${order.billing.nip}',
                   style: pw.TextStyle(font: ttf),
                 ),
-              if (order.billing.address1.isNotEmpty)
+              if (order.billing.address.isNotEmpty)
                 pw.Text(
-                  'Adres: ${order.billing.address1}, ${order.billing.city}',
+                  'Adres: ${order.billing.address}',
                   style: pw.TextStyle(font: ttf),
                 ),
               pw.SizedBox(height: 20),

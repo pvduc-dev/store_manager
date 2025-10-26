@@ -25,7 +25,7 @@ class ProductProvider extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   int _currentPage = 1;
-  static const int _perPage = 20;
+  static const int _perPage = 48;
   String _searchQuery = '';
   ProductSortOption _sortOption = ProductSortOption.newest;
   Category? _selectedCategory;
@@ -33,6 +33,9 @@ class ProductProvider extends ChangeNotifier {
   // Loading product state
   models.Product? _loadingProduct;
   int _loadingProductTempId = -1;
+  
+  // Updating product state
+  Set<int> _updatingProductIds = <int>{};
 
   List<models.Product> get products {
     List<models.Product> result = List.from(_products);
@@ -54,6 +57,7 @@ class ProductProvider extends ChangeNotifier {
   bool get hasFilter => _selectedCategory != null;
   bool get hasLoadingProduct => _loadingProduct != null;
   models.Product? get loadingProduct => _loadingProduct;
+  Set<int> get updatingProductIds => _updatingProductIds;
 
   Future<void> loadProducts({bool refresh = false}) async {
     if (refresh) {
@@ -219,7 +223,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   updateProduct(Map<String, dynamic> data) async {
-    final product = await ProductService.updateProduct(data);
+    final product = await ProductService.updateProductLegacy(data);
     final index = _products.indexWhere((p) => p.id == product!.id);
     if (index != -1) {
       _products[index] = product!;
@@ -229,7 +233,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   addProduct(Map<String, dynamic> data) async {
-    final product = await ProductService.createProduct(data);
+    final product = await ProductService.createProductLegacy(data);
     if (product != null) {
       _products.insert(0, product);
       _productsMap[product.id] = product;
@@ -258,61 +262,129 @@ class ProductProvider extends ChangeNotifier {
 
   // Loading product methods
   void addLoadingProduct(Map<String, dynamic> productData) {
-    print('🎯 ProductProvider: Thêm loading product...');
-    print('📝 Product name: ${productData['name']}');
-    
     // Tạo temporary product với ID âm để phân biệt
     _loadingProduct = models.Product(
       id: _loadingProductTempId,
       name: productData['name'] ?? '',
-      description: productData['description'] ?? '',
-      metaData: (productData['meta_data'] as List?)
-          ?.map((meta) => models.MetaData(
-                key: meta['key'] ?? '',
-                value: meta['value'] ?? '',
-              ))
-          .toList() ?? [],
-      images: [],
-      categories: (productData['categories'] as List?)
-          ?.map((cat) => models.ProductCategory(
-                id: cat['id'] ?? 0,
-                name: cat['name'] ?? '',
-              ))
-          .toList() ?? [],
+      price: productData['price'] ?? '0',
+      step: productData['step'] ?? '1',
+      warehouse: productData['warehouse'] ?? '',
+      carton: productData['carton'] ?? '',
+      image: productData['image'] != null ? models.ProductImage.fromJson(productData['image']) : null,
+      category: productData['category'] != null ? models.ProductCategory.fromJson(productData['category']) : null,
     );
-    print('✅ Loading product được tạo với ID: ${_loadingProduct?.id}');
     notifyListeners();
-    print('🔄 Đã notify listeners');
   }
 
-  Future<void> createProductFromLoading(Map<String, dynamic> productData) async {
-    print('🔥 ProductProvider: Bắt đầu tạo sản phẩm từ loading...');
-    print('📋 ProductData: $productData');
-    
+  /// Create product using new API v9 (multipart/form-data)
+  Future<void> createProductWithNewAPI({
+    required String name,
+    required String price,
+    String? step,
+    String? warehouse,
+    String? carton,
+    String? categoryId,
+    File? imageFile,
+  }) async {
     try {
-      print('📞 Gọi ProductService.createProduct...');
-      final product = await ProductService.createProduct(productData);
-      print('📦 Nhận được product từ service: ${product?.name} (ID: ${product?.id})');
+      final product = await ProductService.createProduct(
+        name: name,
+        price: price,
+        step: step,
+        warehouse: warehouse,
+        carton: carton,
+        categoryId: categoryId,
+        imageFile: imageFile,
+      );
       
       if (product != null) {
-        print('✅ Sản phẩm tạo thành công, cập nhật state...');
         // Xóa loading product
         _loadingProduct = null;
         
         // Thêm product thực vào đầu danh sách
         _products.insert(0, product);
         _productsMap[product.id] = product;
-        print('🔄 Notify listeners...');
         notifyListeners();
-        print('✅ ProductProvider: Hoàn thành tạo sản phẩm!');
       } else {
-        print('❌ ProductService trả về null');
         _loadingProduct = null;
         notifyListeners();
       }
-    } catch (e, stackTrace) {
-      print('❌ ProductProvider: Lỗi tạo sản phẩm: $e');
-      print('📍 Stack trace: $stackTrace');
+    } catch (e) {
+      // Nếu lỗi, chỉ xóa loading product
+      _loadingProduct = null;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Update product using new API v9 (multipart/form-data)
+  Future<void> updateProductWithNewAPI({
+    required int productId,
+    required String name,
+    required String price,
+    String? step,
+    String? warehouse,
+    String? carton,
+    String? categoryId,
+    File? imageFile,
+  }) async {
+    // Mark product as updating
+    _updatingProductIds.add(productId);
+    notifyListeners();
+    
+    try {
+      final updatedProduct = await ProductService.updateProduct(
+        productId: productId,
+        name: name,
+        price: price,
+        step: step,
+        warehouse: warehouse,
+        carton: carton,
+        categoryId: categoryId,
+        imageFile: imageFile,
+      );
+      
+      if (updatedProduct != null) {
+        // Update product in list
+        final index = _products.indexWhere((p) => p.id == productId);
+        if (index != -1) {
+          _products[index] = updatedProduct;
+          _productsMap[productId] = updatedProduct;
+        }
+        
+        // Remove from updating set
+        _updatingProductIds.remove(productId);
+        notifyListeners();
+      } else {
+        _updatingProductIds.remove(productId);
+        notifyListeners();
+      }
+    } catch (e) {
+      // Nếu lỗi, remove khỏi updating set
+      _updatingProductIds.remove(productId);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Legacy method - create product using JSON data (kept for backward compatibility)
+  Future<void> createProductFromLoading(Map<String, dynamic> productData) async {
+    try {
+      final product = await ProductService.createProductLegacy(productData);
+      
+      if (product != null) {
+        // Xóa loading product
+        _loadingProduct = null;
+        
+        // Thêm product thực vào đầu danh sách
+        _products.insert(0, product);
+        _productsMap[product.id] = product;
+        notifyListeners();
+      } else {
+        _loadingProduct = null;
+        notifyListeners();
+      }
+    } catch (e) {
       // Nếu lỗi, chỉ xóa loading product
       _loadingProduct = null;
       notifyListeners();
@@ -329,5 +401,9 @@ class ProductProvider extends ChangeNotifier {
 
   bool isLoadingProduct(int productId) {
     return _loadingProduct != null && _loadingProduct!.id == productId;
+  }
+
+  bool isUpdatingProduct(int productId) {
+    return _updatingProductIds.contains(productId);
   }
 }

@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
-import 'package:store_manager/providers/order_provider.dart';
 
 import 'package:store_manager/models/customer.dart';
 import 'package:store_manager/models/order.dart';
 import 'package:store_manager/models/offline_cart.dart';
 import 'package:store_manager/models/product.dart' as product_models;
+import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/services/product_service.dart';
-import 'package:store_manager/widgets/molecule/customer_search_box.dart';
+import 'package:store_manager/services/customer_service.dart';
+import 'package:store_manager/widgets/molecule/customer_search_dialog.dart';
 import 'package:store_manager/widgets/molecule/offline_cart_item.dart';
+import 'package:store_manager/widgets/atom/text_field.dart';
+import 'package:store_manager/widgets/atom/text_area.dart';
 import 'package:store_manager/utils/currency_formatter.dart';
 
+enum CustomerMode { existing, newCustomer }
+
 class OrderEditScreen extends StatefulWidget {
-  final int orderId;
+  final String orderId;
   
   const OrderEditScreen({super.key, required this.orderId});
 
@@ -24,7 +29,9 @@ class OrderEditScreen extends StatefulWidget {
 
 class _OrderEditScreenState extends State<OrderEditScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _customerSearchController = CustomerSearchController();
+
+  // Customer mode selection
+  CustomerMode _customerMode = CustomerMode.existing;
 
   // Form controllers
   final _firstNameController = TextEditingController();
@@ -39,19 +46,15 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   final _taxRateFocusNode = FocusNode();
   final _searchController = TextEditingController();
 
-  // Payment method
-  String _paymentMethod = 'Płatność przy odbiorze';
+  // Payment method - removed as not used in simplified model
 
   // Tax rate
   double _taxRate = 1.23;
-  int? _existingTaxFeeLineId; // Track existing tax fee line ID for updates
 
   // Customer selection
   Customer? _selectedCustomer;
 
-  // Order data
-  Order? _currentOrder;
-  bool _isLoadingOrder = true;
+  // Order data - now passed from parent screen
   
   // Editable order items (converted from OrderItem to OfflineCartItem for editing)
   List<OfflineCartItem> _editableItems = [];
@@ -65,10 +68,26 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   @override
   void initState() {
     super.initState();
-    _loadOrderData();
     
     // Add focus listener for tax rate field
     _taxRateFocusNode.addListener(_onTaxRateFocusChanged);
+    
+    // Initialize form with order data after widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeOrderData();
+    });
+  }
+
+  void _initializeOrderData() {
+    final orderId = int.tryParse(widget.orderId);
+    if (orderId == null) return;
+    
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final order = orderProvider.getOrderById(orderId);
+    
+    if (order != null) {
+      _fillOrderInfo(order);
+    }
   }
 
   @override
@@ -112,13 +131,236 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       });
     }
   }
+
+  void _clearCustomerForm() {
+    _selectedCustomer = null;
+    // Don't clear form fields when switching modes
+    // Keep current data so user can see what was there
+  }
+
+  Widget _buildCustomerModeSelector() {
+    return Container(
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 0),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Typ klienta',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCustomerModeOption(
+                  title: 'Klient istniejący',
+                  value: CustomerMode.existing,
+                  isSelected: _customerMode == CustomerMode.existing,
+                  onTap: () {
+                    setState(() {
+                      _customerMode = CustomerMode.existing;
+                      _clearCustomerForm();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildCustomerModeOption(
+                  title: 'Nowy klient',
+                  value: CustomerMode.newCustomer,
+                  isSelected: _customerMode == CustomerMode.newCustomer,
+                  onTap: () {
+                    setState(() {
+                      _customerMode = CustomerMode.newCustomer;
+                      _clearCustomerForm();
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerModeOption({
+    required String title,
+    required CustomerMode value,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Builder(
+      builder: (context) {
+        final primaryColor = Theme.of(context).colorScheme.primary;
+        
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor.withOpacity(0.1) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? primaryColor : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: primaryColor.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? primaryColor : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected ? primaryColor : Colors.grey.shade400,
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? primaryColor : Colors.grey.shade700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  Widget _buildCustomerSearchButton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final result = await showDialog<Customer>(
+              useSafeArea: false,
+              context: context,
+              builder: (context) => const CustomerSearchDialog(),
+            );
+            
+            if (result != null) {
+              _fillCustomerInfo(result);
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.grey[500]!,
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search,
+                  color: Colors.grey[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Wyszukaj klienta...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Icon(
+                  _selectedCustomer != null ? Icons.check_circle : Icons.arrow_forward_ios,
+                  color: _selectedCustomer != null 
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey[400],
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   
   // Convert OrderItem to OfflineCartItem for editing
   OfflineCartItem _orderItemToCartItem(OrderItem orderItem) {
+    // Note: OrderItem.price is already total price from API
+    // For editing, we need to calculate unit price
+    double unitPrice = orderItem.price;
+    if (orderItem.quantity > 0) {
+      unitPrice = orderItem.price / orderItem.quantity;
+    }
+    
     return OfflineCartItem(
       productId: orderItem.productId,
       name: orderItem.name,
-      price: orderItem.price.toStringAsFixed(2),
+      price: unitPrice.toStringAsFixed(2), // Store unit price for editing
       quantity: orderItem.quantity,
       imageUrl: orderItem.image?.src,
       addedAt: DateTime.now(), // Use current time since original addedAt is not available
@@ -241,7 +483,6 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         _searchResults = [];
         _isSearching = false;
       });
-      print('Error searching products: $e');
     }
   }
   
@@ -251,7 +492,7 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       product.id,
       product.name,
       '0.00', // Default price - will be edited by user
-      product.images.isNotEmpty ? product.images.first.src : null,
+      product.image?.src,
     );
     
     // Clear search field and results after adding
@@ -262,71 +503,13 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
     });
   }
 
-  Future<void> _loadOrderData() async {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final order = await orderProvider.loadOrderDetail(widget.orderId);
-    
-    if (order != null) {
-      setState(() {
-        _currentOrder = order;
-        _isLoadingOrder = false;
-        
-        // Pre-fill form với dữ liệu order hiện tại
-        _fillOrderInfo(order);
-      });
-    } else {
-      setState(() {
-        _isLoadingOrder = false;
-      });
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nie można załadować informacji o zamówieniu!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingOrder) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: AppBar(
-          title: const Text('Edytuj zamówienie'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_currentOrder == null) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: AppBar(
-          title: const Text('Edytuj zamówienie'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        body: const Center(
-          child: Text(
-            'Nie znaleziono zamówienia',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text('Edytuj zamówienie #${_currentOrder!.number}'),
+        title: Text('Edytuj zamówienie #${widget.orderId}'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -338,30 +521,48 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 100, // Padding để tránh button
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Customer Information Form
-              _buildCustomerForm(),
+      body: Consumer<OrderProvider>(
+        builder: (context, orderProvider, child) {
+          // Re-initialize data if needed
+          final orderId = int.tryParse(widget.orderId);
+          if (orderId != null && _editableItems.isEmpty) {
+            final order = orderProvider.getOrderById(orderId);
+            if (order != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _fillOrderInfo(order);
+              });
+            }
+          }
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 100, // Padding để tránh button
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Customer Mode Selector
+                  _buildCustomerModeSelector(),
+                  
+                  // Customer Information Form
+                  _buildCustomerForm(),
 
-              const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-              // Order Summary
-              _buildOrderSummary(),
+                  // Order Summary
+                  _buildOrderSummary(),
 
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          );
+        },
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -387,45 +588,56 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
   }
 
   void _fillOrderInfo(Order order) {
-    // Fill customer information from order billing
+    // Fill customer information from order billing (no API calls)
     final fullName = '${order.billing.firstName} ${order.billing.lastName}'.trim();
     
-    // Set cả hai controller để đảm bảo tên khách hàng hiển thị đúng
-    _firstNameController.text = fullName;
-    _customerSearchController.setText(fullName);
+    // Set customer mode based on whether customer ID exists (non-zero means existing customer)
+    _customerMode = order.customerId > 0 ? CustomerMode.existing : CustomerMode.newCustomer;
     
-    _taxCodeController.text = order.billing.company;
-    _address1Controller.text = order.billing.address1;
-    _cityController.text = order.billing.city;
+    // Always use billing data (no API calls to load customer)
+    _firstNameController.text = fullName;
+    _taxCodeController.text = order.billing.nip;
+    _address1Controller.text = order.billing.address;
     _phoneController.text = order.billing.phone;
     _emailController.text = order.billing.email;
     
-    // Fill payment method
-    _paymentMethod = order.paymentMethodTitle;
+    _cityController.text = ''; // No city field in new model
+    
+    // Payment method - not used in simplified model
     
     // Extract tax info from customer note if available
     _noteController.text = _extractCleanNote(order.customerNote);
     
-    // Try to extract tax rate from existing fee_lines if available
-    if (order.feeLines.isNotEmpty) {
-      for (final feeLine in order.feeLines) {
-        if (feeLine.name.contains('Tax')) {
-          // Extract tax rate from fee line name like "Tax (1.23x)"
-          RegExp taxRateRegex = RegExp(r'Tax \((\d+\.?\d*)x\)');
-          Match? match = taxRateRegex.firstMatch(feeLine.name);
-          if (match != null) {
-            _taxRate = double.tryParse(match.group(1) ?? '1.23') ?? 1.23;
-            _existingTaxFeeLineId = feeLine.id; // Store existing tax fee line ID
-            break;
-          }
+    // Try to extract tax rate from tax_fee field
+    if (order.taxFee != null && order.taxFee!.isNotEmpty) {
+      final taxFeeAmount = double.tryParse(order.taxFee!) ?? 0.0;
+      if (taxFeeAmount > 0) {
+        // Calculate tax rate from tax fee amount and total
+        final netTotal = order.total - taxFeeAmount;
+        if (netTotal > 0) {
+          _taxRate = order.total / netTotal;
         }
+      }
+    } else {
+      // If no tax fee, calculate from line items to match original total
+      double calculatedNetTotal = 0;
+      for (var item in order.lineItems) {
+        double unitPrice = item.price / item.quantity;
+        calculatedNetTotal += unitPrice * item.quantity;
+      }
+      
+      if (calculatedNetTotal > 0 && order.total > 0) {
+        _taxRate = order.total / calculatedNetTotal;
       }
     }
     _taxRateController.text = _taxRate.toStringAsFixed(2);
     
     // Convert order items to editable items
-    _editableItems = order.lineItems.map((orderItem) => _orderItemToCartItem(orderItem)).toList();
+    setState(() {
+      _editableItems = order.lineItems.map((orderItem) => _orderItemToCartItem(orderItem)).toList();
+    });
   }
+
 
   String _extractCleanNote(String customerNote) {
     // Remove tax information from customer note to show only the original note
@@ -446,18 +658,83 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
     setState(() {
       _selectedCustomer = customer;
 
-      // Fill customer information into form fields
-      _customerSearchController.setText(customer.fullName);
-      _taxCodeController.text = customer.billingCompany;
-      _address1Controller.text = customer.billingAddress;
-      _phoneController.text = customer.billingPhone;
+      // Fill customer information into form fields (for new customer mode or billing)
+      if (_customerMode == CustomerMode.newCustomer) {
+        _firstNameController.text = customer.fullName;
+      }
+      _taxCodeController.text = customer.nip;
+      _address1Controller.text = customer.address;
+      _phoneController.text = customer.phone;
       _emailController.text = customer.email;
     });
   }
 
+  // Helper method to create customer data from form fields
+  Map<String, dynamic> _createCustomerDataFromForm() {
+    final fullName = _firstNameController.text.split(' ');
+    final firstName = fullName.isNotEmpty ? fullName.first : '';
+    final lastName = fullName.length > 1 ? fullName.sublist(1).join(' ') : '';
+    
+    final email = _emailController.text.trim();
+
+    return {
+      'first_name': firstName,
+      'last_name': lastName,
+      'email': email,
+      'password': 'customer@113', // Default password for new customers
+      'billing': {
+        'first_name': firstName,
+        'last_name': lastName,
+        'company': _taxCodeController.text,
+        'address_1': _address1Controller.text,
+        'address_2': '',
+        'city': _cityController.text,
+        'state': '',
+        'postcode': '',
+        'country': 'PL',
+        'email': email,
+        'phone': _phoneController.text,
+      },
+      'shipping': {
+        'first_name': firstName,
+        'last_name': lastName,
+        'company': _taxCodeController.text,
+        'address_1': _address1Controller.text,
+        'address_2': '',
+        'city': _cityController.text,
+        'state': '',
+        'postcode': '',
+        'country': 'PL',
+        'phone': _phoneController.text,
+      },
+    };
+  }
+
+  // Helper method to validate email format
+  bool _isValidEmail(String email) {
+    if (email.isEmpty) return false;
+    
+    // Basic email validation
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  // Helper method to check if we should create a new customer
+  bool _shouldCreateNewCustomer() {
+    // Chỉ tạo customer mới khi chọn chế độ khách hàng mới
+    if (_customerMode == CustomerMode.existing) return false;
+    if (_selectedCustomer != null) return false;
+    
+    // Check if we have required fields
+    final hasName = _firstNameController.text.trim().isNotEmpty;
+    final hasEmail = _emailController.text.trim().isNotEmpty;
+    final hasPhone = _phoneController.text.trim().isNotEmpty;
+    
+    return hasName && hasEmail && hasPhone; // Need name, email and phone
+  }
+
   Widget _buildCustomerForm() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -472,138 +749,87 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Customer Name with Search
-          CustomerSearchBox(
+          const Text(
+            'Informacje o kliencie',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Hiển thị search button chỉ khi chế độ khách hàng cũ
+          if (_customerMode == CustomerMode.existing) ...[
+            _buildCustomerSearchButton(),
+            const SizedBox(height: 16),
+          ],
+
+          // Tên khách hàng (hiển thị cho cả hai mode)
+          AppTextField(
             controller: _firstNameController,
-            searchController: _customerSearchController,
-            onCustomerSelected: (Customer customer) {
-              _fillCustomerInfo(customer);
-            },
-            validator: (value) =>
-                value?.isEmpty == true ? 'Proszę podać nazwę' : null,
+            label: 'Imię i nazwisko *',
+            enabled: _customerMode == CustomerMode.newCustomer,
+            validator: _customerMode == CustomerMode.newCustomer 
+                ? (value) => value?.isEmpty == true ? 'Proszę podać imię i nazwisko' : null
+                : null,
           ),
+          const SizedBox(height: 16),
+
+          // Hiển thị form fields cho cả existing và new customer
+          // NIP field
+          AppTextField(
+            controller: _taxCodeController,
+            label: 'NIP (opcjonalnie)',
+            keyboardType: TextInputType.number,
+            enabled: _customerMode == CustomerMode.newCustomer,
+          ),
+          const SizedBox(height: 16),
+
+          // Address field
+          AppTextField(
+            controller: _address1Controller,
+            label: 'Adres *',
+            validator: _customerMode == CustomerMode.newCustomer 
+                ? (value) => value?.isEmpty == true ? 'Proszę podać adres' : null
+                : null,
+            enabled: _customerMode == CustomerMode.newCustomer,
+          ),
+          const SizedBox(height: 16),
+
+          // Phone field
+          AppTextField(
+            controller: _phoneController,
+            label: 'Numer telefonu *',
+            keyboardType: TextInputType.phone,
+            validator: _customerMode == CustomerMode.newCustomer 
+                ? (value) => value?.isEmpty == true ? 'Proszę podać numer telefonu' : null
+                : null,
+            enabled: _customerMode == CustomerMode.newCustomer,
+          ),
+          const SizedBox(height: 16),
+
+          // Email field
+          AppTextField(
+            controller: _emailController,
+            label: 'Adres email *',
+            keyboardType: TextInputType.emailAddress,
+            validator: _customerMode == CustomerMode.newCustomer 
+                ? (value) {
+                    if (value?.isEmpty == true) return 'Proszę podać email';
+                    return null;
+                  }
+                : null,
+            enabled: _customerMode == CustomerMode.newCustomer,
+          ),
+
 
           const SizedBox(height: 16),
 
-          // Tax Code (NIP)
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextFormField(
-              controller: _taxCodeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'NIP (opcjonalnie)',
-                hintText: 'Wprowadź numer NIP',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Address
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextFormField(
-              controller: _address1Controller,
-              decoration: const InputDecoration(
-                labelText: 'Adres *',
-                hintText: 'Wprowadź adres',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              validator: (value) =>
-                  value?.isEmpty == true ? 'Proszę podać adres' : null,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Phone
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Numer telefonu *',
-                hintText: 'Wprowadź numer telefonu',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              validator: (value) =>
-                  value?.isEmpty == true ? 'Proszę podać numer telefonu' : null,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Email
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Adres email *',
-                hintText: 'Wprowadź email',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              validator: (value) {
-                if (value?.isEmpty == true) return 'Proszę podać email';
-                return null;
-              },
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Order Notes
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextFormField(
-              controller: _noteController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Uwagi do zamówienia (opcjonalnie)',
-                hintText: 'Uwagi dotyczące zamówienia',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                alignLabelWithHint: true,
-              ),
-            ),
+          // Order Notes (luôn enabled)
+          AppTextArea(
+            controller: _noteController,
+            label: 'Uwagi do zamówienia (opcjonalnie)',
+            maxLines: 3,
           ),
         ],
       ),
@@ -721,11 +947,11 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                       final product = _searchResults[index];
                       return ListTile(
                         onTap: () => _addProductFromSearch(product),
-                        leading: product.images.isNotEmpty
+                        leading: product.image?.src != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
                                 child: Image.network(
-                                  product.images.first.src ?? '',
+                                  product.image!.src!,
                                   width: 40,
                                   height: 40,
                                   fit: BoxFit.cover,
@@ -785,8 +1011,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
     // Net total (price before tax - Razem netto) - only non-deleted items
     double netTotal = 0;
     for (var item in _editableItems.where((item) => !item.isDeleted)) {
-      double price = double.tryParse(item.price) ?? 0;
-      netTotal += price * item.quantity;
+      double unitPrice = double.tryParse(item.price) ?? 0;
+      netTotal += unitPrice * item.quantity;
     }
 
     // Calculate gross price with tax (Suma Brutto)
@@ -894,24 +1120,15 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                       'Współczynnik podatkowy:',
                       style: TextStyle(fontSize: 16),
                     ),
-                    SizedBox(
+                    AppTextField(
+                      controller: _taxRateController,
+                      focusNode: _taxRateFocusNode,
+                      label: '',
+                      isCompact: true,
                       width: 80,
-                      child: TextField(
-                        controller: _taxRateController,
-                        focusNode: _taxRateFocusNode,
-                        decoration: const InputDecoration(
-                          hintText: '1.23',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 12,
-                          ),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
-                        ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: true,
                       ),
                     ),
                     const SizedBox(width: 50),
@@ -959,26 +1176,51 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      if (_firstNameController.text.isNotEmpty)
-                        Text(
-                          _firstNameController.text,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      if (_taxCodeController.text.isNotEmpty)
-                        Text(
-                          _taxCodeController.text,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      if (_address1Controller.text.isNotEmpty)
-                        Text(
-                          _address1Controller.text,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      if (_phoneController.text.isNotEmpty)
-                        Text(
-                          _phoneController.text,
-                          style: const TextStyle(fontSize: 14),
-                        ),
+                      // Hiển thị thông tin billing dựa trên customer mode
+                      if (_customerMode == CustomerMode.existing && _selectedCustomer != null) ...[
+                        if (_selectedCustomer!.fullName.isNotEmpty)
+                          Text(
+                            _selectedCustomer!.fullName,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_selectedCustomer!.nip.isNotEmpty)
+                          Text(
+                            _selectedCustomer!.nip,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_selectedCustomer!.address.isNotEmpty)
+                          Text(
+                            _selectedCustomer!.address,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_selectedCustomer!.phone.isNotEmpty)
+                          Text(
+                            _selectedCustomer!.phone,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                      ] else ...[
+                        // Hiển thị từ form fields cho new customer
+                        if (_firstNameController.text.isNotEmpty)
+                          Text(
+                            _firstNameController.text,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_taxCodeController.text.isNotEmpty)
+                          Text(
+                            _taxCodeController.text,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_address1Controller.text.isNotEmpty)
+                          Text(
+                            _address1Controller.text,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        if (_phoneController.text.isNotEmpty)
+                          Text(
+                            _phoneController.text,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                      ],
                     ],
                   ),
                 ),
@@ -995,6 +1237,21 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
+          // Validation - check if we have customer information in form fields
+          final hasCustomerInfo = _firstNameController.text.trim().isNotEmpty ||
+                                 _emailController.text.trim().isNotEmpty ||
+                                 _phoneController.text.trim().isNotEmpty;
+          
+          if (!hasCustomerInfo) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Proszę podać informacje o kliencie'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+          
           if (_formKey.currentState!.validate()) {
             _processUpdate();
           }
@@ -1026,149 +1283,144 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
       return;
     }
 
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Aktualizowanie zamówienia...'),
-          ],
-        ),
-      ),
+    // Calculate totals for loading order
+    double netTotal = 0;
+    for (var item in _editableItems.where((item) => !item.isDeleted)) {
+      double unitPrice = double.tryParse(item.price) ?? 0;
+      netTotal += unitPrice * item.quantity;
+    }
+    double bruttoTotal = netTotal * _taxRate;
+
+    // Prepare customer name for loading order
+    String customerName = _firstNameController.text.trim();
+
+    // ✅ Tạo loading order ngay lập tức (không cần loading dialog)
+    orderProvider.addLoadingOrder(
+      customerName: customerName,
+      total: bruttoTotal.toString(),
+      itemCount: _editableItems.where((item) => !item.isDeleted).length,
     );
 
+    // Navigate to orders screen ngay lập tức
+    context.go('/orders');
+
+    // ✅ Update order trong background (không block UI)
+    _updateOrderInBackground(orderProvider);
+  }
+
+  /// Update order trong background sau khi đã navigate
+  Future<void> _updateOrderInBackground(OrderProvider orderProvider) async {
     try {
-      // Calculate net total (before tax) from editable items - only non-deleted items
+      // Create customer if needed
+      if (_shouldCreateNewCustomer()) {
+        // Validate email before creating customer
+        final email = _emailController.text.trim();
+        if (!_isValidEmail(email)) {
+          // ❌ Xóa loading order và show error
+          orderProvider.removeLoadingOrder();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email không hợp lệ! Vui lòng nhập email đúng định dạng.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        final customerData = _createCustomerDataFromForm();
+        final newCustomer = await CustomerService.createCustomer(customerData);
+        if (newCustomer != null) {
+          _selectedCustomer = newCustomer;
+        }
+        // Continue without customer - order can still be updated with billing info
+      }
+
+      // Calculate net total (before tax) for order notes
       double netTotal = 0;
       for (var item in _editableItems.where((item) => !item.isDeleted)) {
-        double price = double.tryParse(item.price) ?? 0;
-        netTotal += price * item.quantity;
+        double unitPrice = double.tryParse(item.price) ?? 0;
+        netTotal += unitPrice * item.quantity;
       }
       
       // Calculate brutto total (after tax)
       double bruttoTotal = netTotal * _taxRate;
 
       // Prepare billing info
-      final fullName = _firstNameController.text.split(' ');
-      final firstName = fullName.isNotEmpty ? fullName.first : '';
-      final lastName = fullName.length > 1 ? fullName.sublist(1).join(' ') : '';
+      String firstName, lastName, email, phone, address, company;
+      
+      if (_customerMode == CustomerMode.existing && _selectedCustomer != null) {
+        // Use selected customer data
+        final fullName = _selectedCustomer!.fullName.split(' ');
+        firstName = fullName.isNotEmpty ? fullName.first : '';
+        lastName = fullName.length > 1 ? fullName.sublist(1).join(' ') : '';
+        email = _selectedCustomer!.email;
+        phone = _selectedCustomer!.phone;
+        address = _selectedCustomer!.address;
+        company = _selectedCustomer!.nip;
+      } else {
+        // Use form data for new customer
+        final fullName = _firstNameController.text.split(' ');
+        firstName = fullName.isNotEmpty ? fullName.first : '';
+        lastName = fullName.length > 1 ? fullName.sublist(1).join(' ') : '';
+        email = _emailController.text;
+        phone = _phoneController.text;
+        address = _address1Controller.text;
+        company = _taxCodeController.text;
+      }
 
-      final billingInfo = {
-        'first_name': firstName,
-        'last_name': lastName,
-        'company': _taxCodeController.text,
-        'address_1': _address1Controller.text,
-        'address_2': '',
-        'city': _cityController.text,
-        'state': '',
-        'postcode': '',
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-      };
-
-      // Prepare line items from editable items with warehouse information
-      // WooCommerce logic:
-      // - Items with 'id' and quantity > 0: Will be updated
-      // - Items with 'id' and quantity = 0: Will be deleted
-      // - Items without 'id' and quantity > 0: Will be created as new
+      // Prepare line items for new API format
       final lineItems = <Map<String, dynamic>>[];
-      for (var item in _editableItems) {
-        double price = double.tryParse(item.price) ?? 0;
-        int quantity = item.isDeleted ? 0 : item.quantity; // Set quantity = 0 for deleted items
+      for (var item in _editableItems.where((item) => !item.isDeleted)) {
+        double basePrice = double.tryParse(item.price) ?? 0;
         
-        // Get product information to extract kho_hang from meta_data
-        final product = await ProductService.getProductById(item.productId);
-        String khoHang = '';
-        if (product != null) {
-          khoHang = product.metaData
-              .firstWhere(
-                (meta) => meta.key == 'kho_hang',
-                orElse: () => product_models.MetaData(key: 'kho_hang', value: ''),
-              )
-              .value;
-        }
-        
-        final lineItem = <String, dynamic>{
+        lineItems.add({
           'product_id': item.productId,
-          'quantity': quantity,
-          'total': (price * quantity).toStringAsFixed(2),
-          'subtotal': (price * quantity).toStringAsFixed(2), // Subtotal equals total
-          'meta_data': [
-            {
-              'key': 'kho_hang',
-              'value': khoHang,
-            },
-          ],
-        };
-        
-        // Include line item ID if this is an existing item (for update/delete)
-        if (item.lineItemId != null) {
-          lineItem['id'] = item.lineItemId!;
-        }
-        // If lineItemId is null, this is a new item and WooCommerce will create it
-        
-        lineItems.add(lineItem);
+          'quantity': item.quantity,
+          'unit_price': basePrice,
+        });
       }
 
       // Calculate tax amount 
       double taxAmount = bruttoTotal - netTotal;
 
-      // Prepare customer note (only user's note, no tax info)
+      // Prepare customer data for new API format
+      final customerData = {
+        'first_name': '$firstName $lastName'.trim(),
+        'last_name': lastName,
+        'email': email,
+        'address': address,
+        'nip': company,
+        'phone': phone,
+      };
+
+      // Prepare customer note
       String customerNote = _noteController.text.trim();
       if (_selectedCustomer != null && customerNote.isNotEmpty) {
         customerNote += '\nCustomer ID: ${_selectedCustomer!.id}';
       } else if (_selectedCustomer != null) {
         customerNote = 'Customer ID: ${_selectedCustomer!.id}';
       }
-      
-      // Prepare tax fee lines
-      // WooCommerce fee_lines logic:
-      // - Fee lines with 'id': Will be updated
-      // - Fee lines without 'id': Will be created as new
-      final taxFeeLine = <String, dynamic>{
-        'name': 'Tax (${_taxRate.toStringAsFixed(2)}x)',
-        'total': taxAmount.toStringAsFixed(2),
-      };
-      
-      // Include existing tax fee line ID if updating existing fee line
-      if (_existingTaxFeeLineId != null) {
-        taxFeeLine['id'] = _existingTaxFeeLineId!;
-      }
-      
-      final taxFeeLines = [taxFeeLine];
 
-      // Update order
-      final updatedOrder = await orderProvider.updateOrder(
-        orderId: widget.orderId,
-        billingInfo: billingInfo,
+      // Update order with new API structure
+      final order = await orderProvider.updateOrder(
+        orderId: int.parse(widget.orderId),
         lineItems: lineItems,
-        paymentMethod: 'cod',
-        paymentMethodTitle: _paymentMethod,
+        customer: customerData,
         customerNote: customerNote,
-        feeLines: taxFeeLines,
-        customerId: _selectedCustomer?.id, // Add customer_id if customer is selected
+        taxFee: taxAmount,
       );
 
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      if (updatedOrder != null) {
+      if (order != null) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Zamówienie zostało pomyślnie zaktualizowane! Numer zamówienia: ${updatedOrder.number}'),
+            content: Text('Zamówienie zostało zaktualizowane pomyślnie! Numer zamówienia: ${order.number}'),
             backgroundColor: Colors.green,
           ),
         );
-
-        // Navigate back
-        context.pop();
       } else {
-        // Show error message
+        // ❌ Xóa loading order và show error
+        orderProvider.removeLoadingOrder();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Wystąpił błąd podczas aktualizacji zamówienia. Spróbuj ponownie!'),
@@ -1177,10 +1429,8 @@ class _OrderEditScreenState extends State<OrderEditScreen> {
         );
       }
     } catch (e) {
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Show error message
+      // ❌ Xóa loading order và show error
+      orderProvider.removeLoadingOrder();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
       );

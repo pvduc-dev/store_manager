@@ -201,7 +201,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       floatingActionButton: _isSelectionMode
           ? null
           : Row(
@@ -323,21 +322,28 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       children: [
                         GridView.builder(
                           controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 0,
+                          ),
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 8,
+                                crossAxisCount: 4,
+                                crossAxisSpacing: 4,
                                 mainAxisSpacing: 8,
-                                childAspectRatio: _isSelectionMode ? 1.05 : 0.88,
+                                childAspectRatio: _isSelectionMode ? 0.85 : 0.7,
                               ),
                           itemCount: productProvider.products.length,
                           itemBuilder: (context, index) {
                             return ProductCard(
                               product: productProvider.products[index],
                               isSelectionMode: _isSelectionMode,
-                              isSelected: isProductSelected(productProvider.products[index].id),
-                              onSelectionTap: () => toggleProductSelection(productProvider.products[index].id),
+                              isSelected: isProductSelected(
+                                productProvider.products[index].id,
+                              ),
+                              onSelectionTap: () => toggleProductSelection(
+                                productProvider.products[index].id,
+                              ),
                             );
                           },
                         ),
@@ -363,7 +369,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                 child: CircularProgressIndicator(
                                   strokeCap: StrokeCap.round,
                                   strokeWidth: 4.0,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.blue,
+                                  ),
                                 ),
                               ),
                             ),
@@ -393,46 +401,50 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.grey[400]!, width: 1.0),
                   ),
                   child: Row(
                     children: [
                       SizedBox(width: 16),
-                      Icon(Icons.search, color: Colors.grey[600]),
+                      Icon(Icons.search, color: Colors.grey[600], size: 22),
                       SizedBox(width: 12),
                       Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          style: TextStyle(fontSize: 16),
-                          onSubmitted: (_) => _performSearch(),
-                          decoration: InputDecoration(
-                            hintText: 'Wyszukaj produkty',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 16,
-                            ),
-                            border: InputBorder.none,
-                            suffixIcon: Consumer<ProductProvider>(
-                              builder: (context, productProvider, child) {
-                                if (productProvider.isSearching) {
-                                  return IconButton(
-                                    icon: Icon(
-                                      Icons.clear,
-                                      color: Colors.grey[600],
-                                    ),
-                                    onPressed: () {
-                                      _searchController.removeListener(
-                                        _onSearchChanged,
-                                      );
-                                      _searchController.clear();
-                                      _searchController.addListener(
-                                        _onSearchChanged,
-                                      );
-                                      productProvider.clearSearch();
-                                    },
-                                  );
-                                }
-                                return SizedBox.shrink();
-                              },
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: 3),
+                          child: TextField(
+                            controller: _searchController,
+                            style: TextStyle(fontSize: 16),
+                            onSubmitted: (_) => _performSearch(),
+                            decoration: InputDecoration(
+                              hintText: 'Wyszukaj produkty',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                              border: InputBorder.none,
+                              suffixIcon: Consumer<ProductProvider>(
+                                builder: (context, productProvider, child) {
+                                  if (productProvider.isSearching) {
+                                    return IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey[600],
+                                      ),
+                                      onPressed: () {
+                                        _searchController.removeListener(
+                                          _onSearchChanged,
+                                        );
+                                        _searchController.clear();
+                                        _searchController.addListener(
+                                          _onSearchChanged,
+                                        );
+                                        productProvider.clearSearch();
+                                      },
+                                    );
+                                  }
+                                  return SizedBox.shrink();
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -442,7 +454,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
               ),
               SizedBox(width: 12),
-              FilledButton(onPressed: _performSearch, child: Text('Szukaj')),
+              FilledButton(
+                onPressed: _performSearch,
+                style: FilledButton.styleFrom(
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: Text('Szukaj'),
+              ),
             ],
           ),
         ],
@@ -464,7 +488,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: Colors.grey[400]!, width: 1),
                   ),
                   child: Row(
                     children: [
@@ -494,7 +519,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: Colors.grey[400]!, width: 1),
               ),
               child: Row(
                 children: [

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +20,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   late TabController _tabController;
   List<Order> _customerOrders = [];
   bool _isLoadingOrders = false;
+  bool _hasLoadingError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -29,8 +30,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final customerId = int.tryParse(widget.customerId);
       if (customerId != null) {
-        context.read<CustomerProvider>().loadCustomerById(customerId);
-        _loadCustomerOrders(customerId);
+        _checkCustomerInCache(customerId);
+      } else {
+        setState(() {
+          _hasLoadingError = true;
+          _errorMessage = 'Nieprawidłowy identyfikator klienta';
+        });
       }
     });
   }
@@ -41,19 +46,41 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     super.dispose();
   }
 
+  void _checkCustomerInCache(int customerId) {
+    final customerProvider = context.read<CustomerProvider>();
+    final customer = customerProvider.getCustomerById(customerId);
+    
+    if (customer == null) {
+      setState(() {
+        _hasLoadingError = true;
+        _errorMessage = 'Nie znaleziono informacji o kliencie.\nProszę powrócić do listy klientów.';
+      });
+      return;
+    }
+    
+    // Load orders if customer is in cache
+    _loadCustomerOrders(customerId);
+  }
+
   Future<void> _loadCustomerOrders(int customerId) async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoadingOrders = true;
     });
 
     try {
       final orders = await OrderService.getOrdersByCustomerId(customerId);
+      if (!mounted) return;
+      
       setState(() {
         _customerOrders = orders;
         _isLoadingOrders = false;
       });
     } catch (e) {
       print('Error loading customer orders: $e');
+      if (!mounted) return;
+      
       setState(() {
         _customerOrders = [];
         _isLoadingOrders = false;
@@ -79,28 +106,82 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           elevation: 1,
           title: const Text('Informacje o kliencie'),
         ),
-        body: const Center(child: Text('ID khách hàng không hợp lệ')),
+        body: const Center(child: Text('Nieprawidłowy identyfikator klienta')),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          onPressed: () {
+            context.go('/customers');
+          },
+          icon: const Icon(Icons.arrow_back),
+        ),
         title: const Text('Informacje o kliencie'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         actions: [
-          TextButton(
+          IconButton(
             onPressed: () {
-              context.push('/customers/${customerId}/edit');
+              _showOptionsBottomSheet(context, customerId);
             },
-            child: const Text('Edytuj', style: TextStyle(color: Colors.blue, fontSize: 16)),
+            icon: const Icon(Icons.more_vert),
           ),
         ],
       ),
       body: Consumer<CustomerProvider>(
         builder: (context, customerProvider, child) {
           final customer = customerProvider.getCustomerById(customerId);
+
+          // Display error if exists
+          if (_hasLoadingError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          context.go('/customers');
+                        },
+                        child: const Text('Powrót do listy'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _hasLoadingError = false;
+                            _errorMessage = '';
+                          });
+                          _checkCustomerInCache(customerId);
+                        },
+                        child: const Text('Spróbuj ponownie'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }
 
           if (customer == null) {
             return const Center(child: CircularProgressIndicator());
@@ -120,8 +201,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   unselectedLabelColor: Colors.grey[600],
                   indicatorColor: Colors.blue,
                   tabs: const [
-                    Tab(text: 'Thông tin liên hệ'),
-                    Tab(text: 'Đơn hàng'),
+                    Tab(text: 'Informacje kontaktowe'),
+                    Tab(text: 'Zamówienia'),
                   ],
                 ),
               ),
@@ -145,6 +226,215 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+  void _showOptionsBottomSheet(BuildContext context, int customerId) {
+    final customer = context.read<CustomerProvider>().getCustomerById(customerId);
+    if (customer == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Edit option
+            InkWell(
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/customers/$customerId/edit');
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.edit, color: Colors.blue),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Edytuj klienta',
+                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: Colors.grey[300],
+              indent: 24,
+              endIndent: 24,
+            ),
+            
+            // Delete option
+            InkWell(
+              onTap: customer.orderCount > 0 
+                ? null
+                : () {
+                    Navigator.pop(context);
+                    _showDeleteConfirmationDialog(context, customer);
+                  },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: customer.orderCount > 0 ? Colors.grey : Colors.red,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Usuń klienta',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: customer.orderCount > 0 ? Colors.grey : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (customer.orderCount > 0) ...[
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Nie można usunąć klienta z zamówieniami',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, customer) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: const Text(
+          'Usuń klienta',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Czy na pewno chcesz usunąć klienta?'),
+            const SizedBox(height: 8),
+            Text(
+              '"${customer.fullName}"',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Ta akcja jest nieodwracalna.',
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Anuluj'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteCustomer(context, customer.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Usuń'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(BuildContext context, int customerId) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      await context.read<CustomerProvider>().deleteCustomer(customerId);
+      
+      // Hide loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+        
+        // Show success message and navigate back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Klient został pomyślnie usunięty'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to customer list
+        context.go('/customers');
+      }
+    } catch (e) {
+      // Hide loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+        
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Błąd podczas usuwania klienta: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildCustomerBasicInfo(customer) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -162,10 +452,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundImage: CachedNetworkImageProvider(
-                      customer.avatarUrl,
+                    child: Text(
+                      customer.fullName.isNotEmpty ? customer.fullName[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: Colors.grey[600],
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -175,7 +470,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         Text(
                           customer.fullName.isNotEmpty
                               ? customer.fullName
-                              : customer.username,
+                              : 'Brak nazwy',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -221,22 +516,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     child: Column(
                       children: [
                         Text(
-                          'Status',
+                          'Zamówienia',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
                           ),
                         ),
                         Text(
-                          customer.isPayingCustomer
-                              ? 'Kupiono'
-                              : 'Nie kupiono',
+                          customer.orderCount.toString(),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: customer.isPayingCustomer
+                            color: customer.orderCount > 0
                                 ? Colors.green
-                                : Colors.orange,
+                                : Colors.grey[600],
                           ),
                         ),
                       ],
@@ -272,28 +565,28 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (customer.billing.company.isNotEmpty)
+              if (customer.nip.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.business),
                   title: const Text('NIP'),
-                  subtitle: Text(customer.billing.company),
+                  subtitle: Text(customer.nip),
                 ),
-              if (customer.billing.phone.isNotEmpty)
+              if (customer.phone.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.phone),
                   title: const Text('Telefon'),
-                  subtitle: Text(customer.billing.phone),
+                  subtitle: Text(customer.phone),
                 ),
-              if (customer.billingAddress.isNotEmpty)
+              if (customer.address.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.location_on),
                   title: const Text('Adres'),
-                  subtitle: Text(customer.billingAddress),
+                  subtitle: Text(customer.address),
                 ),
               ListTile(
                 leading: const Icon(Icons.calendar_today),
-                title: const Text('Data utworzenia'),
-                subtitle: Text(_formatDate(customer.dateCreated)),
+                title: const Text('Data rejestracji'),
+                subtitle: Text(customer.formattedRegisteredDate),
               ),
             ],
           ),
@@ -319,7 +612,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             ),
             SizedBox(height: 16),
             Text(
-              'Không có đơn hàng nào',
+              'Brak zamówień',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey,
@@ -356,7 +649,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
             ),
             title: Text(
-              'Đơn hàng #${order.number}',
+              'Zamówienie #${order.number}',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
@@ -365,9 +658,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                Text('Trạng thái: ${_getStatusDisplayName(order.status)}'),
-                Text('Ngày tạo: ${_formatDate(order.dateCreated.toIso8601String())}'),
-                Text('Tổng: ${CurrencyFormatter.formatPLN(double.tryParse(order.total) ?? 0)}'),
+                Text('Status: ${_getStatusDisplayName(order.status)}'),
+                Text('Data utworzenia: ${_formatDate(order.dateCreated.toIso8601String())}'),
+                Text('Całkowity: ${CurrencyFormatter.formatPLN(order.total)}'),
               ],
             ),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -404,19 +697,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   String _getStatusDisplayName(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'Hoàn thành';
+        return 'Zakończone';
       case 'processing':
-        return 'Đang xử lý';
+        return 'Przetwarzanie';
       case 'pending':
-        return 'Chờ xử lý';
+        return 'Oczekujące';
       case 'cancelled':
-        return 'Đã hủy';
+        return 'Anulowane';
       case 'refunded':
-        return 'Đã hoàn tiền';
+        return 'Zwrócone';
       case 'failed':
-        return 'Thất bại';
+        return 'Nieudane';
       case 'on-hold':
-        return 'Tạm giữ';
+        return 'Wstrzymane';
       default:
         return status;
     }

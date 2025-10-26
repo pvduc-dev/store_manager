@@ -1,35 +1,43 @@
 class Product {
   final int id;
   final String name;
-  final String description;
-  final List<MetaData> metaData;
-  final List<ProductImage> images;
-  final List<ProductCategory> categories;
+  final String price;
+  final String step;
+  final String warehouse;
+  final String carton;
+  final ProductImage? image;
+  final ProductCategory? category;
 
   Product({
     required this.id,
     required this.name,
-    required this.description,
-    required this.metaData,
-    required this.images,
-    required this.categories,
+    required this.price,
+    required this.step,
+    required this.warehouse,
+    required this.carton,
+    this.image,
+    this.category,
   });
 
   Product copyWith({
     int? id,
     String? name,
-    String? description,
-    List<MetaData>? metaData,
-    List<ProductImage>? images,
-    List<ProductCategory>? categories,
+    String? price,
+    String? step,
+    String? warehouse,
+    String? carton,
+    ProductImage? image,
+    ProductCategory? category,
   }) {
     return Product(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description ?? this.description,
-      metaData: metaData ?? this.metaData,
-      images: images ?? this.images,
-      categories: categories ?? this.categories,
+      price: price ?? this.price,
+      step: step ?? this.step,
+      warehouse: warehouse ?? this.warehouse,
+      carton: carton ?? this.carton,
+      image: image ?? this.image,
+      category: category ?? this.category,
     );
   }
 
@@ -37,22 +45,12 @@ class Product {
     return Product(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      metaData:
-          (json['meta_data'] as List?)
-              ?.map((meta) => MetaData.fromJson(meta as Map<String, dynamic>))
-              .toList() ??
-          [],
-      images:
-          (json['images'] as List?)
-              ?.map((e) => ProductImage.fromJson(e))
-              .toList() ??
-          [],
-      categories:
-          (json['categories'] as List?)
-              ?.map((e) => ProductCategory.fromJson(e))
-              .toList() ??
-          [],
+      price: json['price'] ?? '0',
+      step: json['step'] ?? '1',
+      warehouse: json['warehouse'] ?? '',
+      carton: json['carton'] ?? '',
+      image: json['image'] != null ? ProductImage.fromJson(json['image']) : null,
+      category: json['category'] != null ? ProductCategory.fromJson(json['category']) : null,
     );
   }
 
@@ -60,48 +58,31 @@ class Product {
     return {
       'id': id,
       'name': name,
-      'description': description,
-      'meta_data': metaData.map((meta) => meta.toJson()).toList(),
-      'images': images.map((image) => image.toJson()).toList(),
-      'categories': categories.map((category) => category.toJson()).toList(),
+      'price': price,
+      'step': step,
+      'warehouse': warehouse,
+      'carton': carton,
+      'image': image?.toJson(),
+      'category': category?.toJson(),
     };
   }
 }
 
 class ProductImage {
-  final int id;
+  final String id;
   final String? src;
-  final String? name;
-  final String? alt;
 
-  ProductImage({required this.id, this.src, this.name, this.alt});
+  ProductImage({required this.id, this.src});
 
   factory ProductImage.fromJson(Map<String, dynamic> json) {
     return ProductImage(
-      id: json['id'] ?? 0,
+      id: json['id']?.toString() ?? '0',
       src: json['src'] ?? '',
-      name: json['name'] ?? '',
-      alt: json['alt'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'src': src, 'name': name, 'alt': alt};
-  }
-}
-
-class MetaData {
-  final String key;
-  final String value;
-
-  MetaData({required this.key, required this.value});
-
-  factory MetaData.fromJson(Map<String, dynamic> json) {
-    return MetaData(key: json['key'] ?? '', value: json['value'] ?? '');
-  }
-
-  Map<String, dynamic> toJson() {
-    return {'key': key, 'value': value};
+    return {'id': id, 'src': src};
   }
 }
 

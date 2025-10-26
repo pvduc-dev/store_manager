@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flashy_flushbar/flashy_flushbar_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,9 +11,16 @@ import 'package:store_manager/providers/order_provider.dart';
 import 'package:store_manager/providers/product_provider.dart';
 import 'package:store_manager/routers/app_router.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:store_manager/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase first
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   final authProvider = AuthProvider();
   final productProvider = ProductProvider();
@@ -58,6 +66,17 @@ class StoreManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+    FirebaseMessaging.instance.subscribeToTopic('new_orders');
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authProvider),

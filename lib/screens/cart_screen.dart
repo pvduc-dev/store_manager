@@ -5,6 +5,7 @@ import 'package:store_manager/providers/cart_provider.dart';
 import 'package:store_manager/widgets/molecule/product_search_box.dart';
 import 'package:store_manager/widgets/molecule/offline_cart_item.dart';
 import 'package:store_manager/utils/currency_formatter.dart';
+import 'package:store_manager/services/product_service.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -70,12 +71,14 @@ class _CartScreenState extends State<CartScreen> {
     
     return Column(
       children: [
-        // Search box để thêm sản phẩm - luôn hiển thị
-        ProductSearchBox(
-          onSearch: (query) {
-            // TODO: Implement product search
-            print('Searching for: $query');
-          },
+        // Search section với ProductSearchBox mới
+        Container(
+          margin: const EdgeInsets.all(16),
+          child: ProductSearchBox(
+            onProductSelected: (productId) {
+              _handleProductSelected(productId);
+            },
+          ),
         ),
         
         // Nội dung chính của giỏ hàng
@@ -234,6 +237,55 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
+  }
+
+  void _handleProductSelected(int productId) async {
+    try {
+      final cartProvider = context.read<CartProvider>();
+      final product = await ProductService.getProductById(productId);
+      
+      if (product == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không thể tải thông tin sản phẩm'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final existingItem = cartProvider.getItem(product.id);
+
+      if (existingItem != null) {
+        await cartProvider.updateItemQuantity(
+          product.id,
+          existingItem.quantity + 1,
+        );
+      } else {
+        String price = product.price;
+        int stepQuantity = int.tryParse(product.step) ?? 1;
+
+        await cartProvider.addItemToCart(
+          productId: product.id,
+          name: product.name,
+          price: price,
+          quantity: stepQuantity,
+          imageUrl: product.image?.src,
+          description: '',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi thêm sản phẩm: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _proceedToCheckout() {

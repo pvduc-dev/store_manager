@@ -15,8 +15,22 @@ class OrderProvider extends ChangeNotifier {
   String _searchQuery = '';
   int _currentPage = 1;
   static const int _perPage = 20;
+  
+  // Loading order state (tương tự ProductProvider)
+  Order? _loadingOrder;
+  int _loadingOrderTempId = -1;
 
-  List<Order> get orders => _isSearching ? _filteredOrders : _orders;
+  List<Order> get orders {
+    if (_isSearching) {
+      return _filteredOrders;
+    }
+    
+    List<Order> result = List.from(_orders);
+    if (_loadingOrder != null) {
+      result.insert(0, _loadingOrder!);
+    }
+    return result;
+  }
 
   Map<int, Order> get ordersMap => _ordersMap;
 
@@ -25,6 +39,8 @@ class OrderProvider extends ChangeNotifier {
   bool get hasMoreData => _hasMoreData;
   bool get isSearching => _isSearching;
   String get searchQuery => _searchQuery;
+  bool get hasLoadingOrder => _loadingOrder != null;
+  Order? get loadingOrder => _loadingOrder;
 
   Future<void> loadOrders({bool refresh = false}) async {
     if (refresh) {
@@ -47,7 +63,7 @@ class OrderProvider extends ChangeNotifier {
         response.map((order) => MapEntry(order.id, order)),
       );
       _currentPage = 1;
-      _hasMoreData = response.length == _perPage;
+      _hasMoreData = response.length == _perPage; // ✅ Simple logic như Customer
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -73,7 +89,7 @@ class OrderProvider extends ChangeNotifier {
           _ordersMap[order.id] = order;
         }
         _currentPage = nextPage;
-        _hasMoreData = response.length == _perPage;
+        _hasMoreData = response.length == _perPage; // ✅ Simple logic như Customer
       } else {
         _hasMoreData = false;
       }
@@ -95,9 +111,7 @@ class OrderProvider extends ChangeNotifier {
     _searchQuery = query.trim();
     
     if (_searchQuery.isEmpty) {
-      _isSearching = false;
-      _filteredOrders.clear();
-      notifyListeners();
+      clearSearch(); // ✅ Use clearSearch() instead
       return;
     }
 
@@ -112,6 +126,27 @@ class OrderProvider extends ChangeNotifier {
       );
       
       _filteredOrders = searchResults;
+      
+      // ✅ Cập nhật _ordersMap với search results để đồng bộ
+      for (final order in searchResults) {
+        _ordersMap[order.id] = order;
+      }
+      
+      // ✅ Merge search results vào _orders để đồng bộ
+      for (final searchOrder in searchResults) {
+        final existingIndex = _orders.indexWhere((o) => o.id == searchOrder.id);
+        if (existingIndex != -1) {
+          // Update existing order với data mới
+          _orders[existingIndex] = searchOrder;
+        } else {
+          // Thêm order mới và sort lại theo date
+          _orders.add(searchOrder);
+        }
+      }
+      
+      // ✅ Sort lại _orders theo date_created descending
+      _orders.sort((a, b) => b.dateCreated.compareTo(a.dateCreated));
+      
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -127,6 +162,8 @@ class OrderProvider extends ChangeNotifier {
     _isSearching = false;
     _filteredOrders.clear();
     notifyListeners();
+    
+    // ✅ Không cần reload API vì _orders đã được sync trong searchOrders()
   }
 
   Future<Order?> loadOrderDetail(int orderId) async {
@@ -184,24 +221,18 @@ class OrderProvider extends ChangeNotifier {
 
   Future<Order?> updateOrder({
     required int orderId,
-    required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
-    String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Płatność przy odbiorze',
-    String? customerNote,
-    List<Map<String, dynamic>>? feeLines,
-    int? customerId,
+    required Map<String, dynamic> customer,
+    required String customerNote,
+    required double taxFee,
   }) async {
     try {
       final updatedOrder = await OrderService.updateOrder(
         orderId: orderId,
-        billingInfo: billingInfo,
         lineItems: lineItems,
-        paymentMethod: paymentMethod,
-        paymentMethodTitle: paymentMethodTitle,
+        customer: customer,
         customerNote: customerNote,
-        feeLines: feeLines ?? [],
-        customerId: customerId,
+        taxFee: taxFee,
       );
       
       if (updatedOrder != null) {
@@ -229,35 +260,90 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  /// Tạo temporary loading order (tương tự ProductProvider)
+  void addLoadingOrder({
+    required String customerName,
+    required String total,
+    required int itemCount,
+  }) {
+    // Tạo fake line items để hiển thị đúng số lượng sản phẩm
+    final fakeLineItems = List.generate(itemCount, (index) => OrderItem(
+      id: index,
+      name: 'Đang tải...',
+      productId: 0,
+      quantity: 1,
+      price: 0.0,
+      image: null,
+      warehouse: '',
+    ));
+
+    _loadingOrder = Order(
+      id: _loadingOrderTempId,
+      status: 'pending', // Trạng thái đang tạo
+      dateCreated: DateTime.now(),
+      total: double.tryParse(total.replaceAll('zł', '').replaceAll(' ', '')) ?? 0.0,
+      customerId: 0,
+      billing: Billing(
+        firstName: customerName,
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        nip: '',
+      ),
+      lineItems: fakeLineItems, // ✅ Fake items với đúng số lượng
+      taxFee: '0.00',
+      customerNote: '',
+      number: 'Đang tạo...',
+    );
+    notifyListeners();
+  }
+
+  /// Thay thế loading order bằng real order
+  void replaceLoadingOrderWithReal(Order realOrder) {
+    if (_loadingOrder != null) {
+      _loadingOrder = null;
+      _orders.insert(0, realOrder);
+      _ordersMap[realOrder.id] = realOrder;
+      notifyListeners();
+    }
+  }
+
+  /// Xóa loading order nếu có lỗi
+  void removeLoadingOrder() {
+    if (_loadingOrder != null) {
+      _loadingOrder = null;
+      notifyListeners();
+    }
+  }
+
   Future<Order?> createOrder({
-    required Map<String, dynamic> billingInfo,
     required List<Map<String, dynamic>> lineItems,
-    String paymentMethod = 'cod',
-    String paymentMethodTitle = 'Płatność przy odbiorze',
-    String? customerNote,
-    List<Map<String, dynamic>>? feeLines,
-    int? customerId,
+    required Map<String, dynamic> customer,
+    required String customerNote,
+    required double taxFee,
   }) async {
     try {
       final newOrder = await OrderService.createOrder(
-        billingInfo: billingInfo,
         lineItems: lineItems,
-        paymentMethod: paymentMethod,
-        paymentMethodTitle: paymentMethodTitle,
+        customer: customer,
         customerNote: customerNote,
-        feeLines: feeLines ?? [],
-        customerId: customerId,
+        taxFee: taxFee,
       );
       
       if (newOrder != null) {
-        _orders.insert(0, newOrder);
-        _ordersMap[newOrder.id] = newOrder;
-        notifyListeners();
+        // ✅ Thay thế loading order bằng real order
+        replaceLoadingOrderWithReal(newOrder);
         return newOrder;
+      } else {
+        // ❌ Xóa loading order nếu lỗi
+        removeLoadingOrder();
+        return null;
       }
-      return null;
     } catch (e) {
       print('Error creating order: $e');
+      // ❌ Xóa loading order nếu lỗi
+      removeLoadingOrder();
       return null;
     }
   }

@@ -68,27 +68,19 @@ class _AddToCartButtonState extends State<AddToCartButton> {
           existingItem.quantity + widget.quantity,
         );
       } else {
-        // Lần đầu tiên thêm sản phẩm - sử dụng giá trị PACZKA làm số lượng mặc định
-        String price = widget.product.metaData.firstWhere((meta) => meta.key == 'custom_price').value;
+        // Lần đầu tiên thêm sản phẩm - sử dụng giá trị step làm số lượng mặc định
+        String price = widget.product.price;
         
-        // Lấy giá trị PACZKA từ metadata
-        String paczkaValue = widget.product.metaData
-            .firstWhere(
-              (meta) => meta.key == 'paczka',
-              orElse: () => product_models.MetaData(key: 'paczka', value: '1'),
-            )
-            .value;
-        
-        // Chuyển đổi PACZKA thành số nguyên, mặc định là 1 nếu không parse được
-        int paczkaQuantity = int.tryParse(paczkaValue) ?? 1;
+        // Chuyển đổi step thành số nguyên, mặc định là 1 nếu không parse được
+        int stepQuantity = int.tryParse(widget.product.step) ?? 1;
         
         await cartProvider.addItemToCart(
           productId: widget.product.id,
           name: widget.product.name,
           price: price,
-          quantity: paczkaQuantity, // Sử dụng giá trị PACZKA thay vì widget.quantity
-          imageUrl: widget.product.images.isNotEmpty ? widget.product.images.first.src : null,
-          description: widget.product.description,
+          quantity: stepQuantity, // Sử dụng giá trị step
+          imageUrl: widget.product.image?.src,
+          description: '',  // Description không còn có trong model mới
         );
       }
     } catch (e) {

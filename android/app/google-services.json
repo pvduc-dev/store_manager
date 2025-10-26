@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "952439837020",
+    "project_id": "woo-store196",
+    "storage_bucket": "woo-store196.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:952439837020:android:e7f339452518cdf4a7b199",
+        "android_client_info": {
+          "package_name": "dev.pvduc.store_manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB03fP6I91cyRn0MwlIWj_5tCdWP7hpR40"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

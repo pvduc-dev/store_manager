@@ -54,30 +54,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
     }
   }
 
-  void _performSearch() {
+  Future<void> _performSearch() async {
     final orderProvider = Provider.of<OrderProvider>(
       context,
       listen: false,
     );
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
-      orderProvider.searchOrders(query);
+      await orderProvider.searchOrders(query);
     } else {
-      orderProvider.clearSearch();
+      orderProvider.clearSearch(); // ✅ No await needed
     }
   }
 
   Future<void> _onRefresh(BuildContext context) async {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     _searchController.clear(); // Clear search field khi refresh
-    orderProvider.clearSearch();
-    await orderProvider.loadOrders(refresh: true);
+    orderProvider.clearSearch(); // ✅ No await needed
+    await orderProvider.loadOrders(refresh: true); // ✅ Explicit reload
   }
 
   void _clearSearch() {
     _searchController.clear();
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    orderProvider.clearSearch();
+    orderProvider.clearSearch(); // ✅ No await needed
   }
 
   @override
@@ -162,7 +162,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         }
                         
                         final order = orderProvider.orders[index];
-                        return _buildOrderItem(context, order);
+                        return _buildOrderItem(context, order, orderProvider);
                       },
                     ),
                   );
@@ -175,17 +175,21 @@ class _OrderListScreenState extends State<OrderListScreen> {
     );
   }
 
-  Widget _buildOrderItem(BuildContext context, Order order) {
+  Widget _buildOrderItem(BuildContext context, Order order, OrderProvider orderProvider) {
+    // Check if this is a loading order
+    final isLoadingOrder = order.id == -1; // _loadingOrderTempId
+    
     return GestureDetector(
-      onTap: () {
+      onTap: isLoadingOrder ? null : () {
         context.push('/orders/${order.id}');
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isLoadingOrder ? Colors.orange.shade50 : Colors.white,
           borderRadius: BorderRadius.circular(8),
+          border: isLoadingOrder ? Border.all(color: Colors.orange.shade200, width: 1) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withValues(alpha: 0.1),
@@ -203,19 +207,31 @@ class _OrderListScreenState extends State<OrderListScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.receipt_long,
-                      color: Colors.blue,
+                    Icon(
+                      isLoadingOrder ? Icons.hourglass_empty : Icons.receipt_long,
+                      color: isLoadingOrder ? Colors.orange : Colors.blue,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      order.id.toString(),
-                      style: const TextStyle(
+                      isLoadingOrder ? 'Đang tạo...' : order.id.toString(),
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: isLoadingOrder ? Colors.orange.shade700 : null,
                       ),
                     ),
+                    if (isLoadingOrder) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade700),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 Text(
@@ -227,16 +243,28 @@ class _OrderListScreenState extends State<OrderListScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.person, color: Colors.blue, size: 16),
+                Icon(
+                  Icons.person, 
+                  color: isLoadingOrder ? Colors.orange : Colors.blue, 
+                  size: 16
+                ),
                 const SizedBox(width: 8),
                 Text(
                   order.billing.firstName.isNotEmpty
                       ? order.billing.firstName
                       : 'Klient #${order.customerId}',
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isLoadingOrder ? Colors.orange.shade700 : null,
+                  ),
                 ),
                 Spacer(),
-                Text(order.orderStatus.displayName),
+                Text(
+                  isLoadingOrder ? 'Đang tạo...' : order.orderStatus.displayName,
+                  style: TextStyle(
+                    color: isLoadingOrder ? Colors.orange.shade700 : null,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -244,16 +272,23 @@ class _OrderListScreenState extends State<OrderListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  CurrencyFormatter.formatWithSymbol(double.parse(order.total), order.currencySymbol),
+                  isLoadingOrder 
+                    ? order.total.toString() // Already formatted in addLoadingOrder
+                    : CurrencyFormatter.formatWithSymbol(order.total, 'zł'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: _getAmountColor(order.orderStatus),
+                    color: isLoadingOrder ? Colors.orange.shade700 : _getAmountColor(order.orderStatus),
                   ),
                 ),
                 Text(
-                  '${order.lineItems.length} produktów',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  isLoadingOrder 
+                    ? '${order.lineItems.length} produktów' 
+                    : '${order.lineItems.length} produktów',
+                  style: TextStyle(
+                    color: isLoadingOrder ? Colors.orange.shade600 : Colors.grey[600], 
+                    fontSize: 12
+                  ),
                 ),
               ],
             ),

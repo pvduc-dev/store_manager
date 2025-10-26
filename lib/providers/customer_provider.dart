@@ -190,17 +190,17 @@ class CustomerProvider extends ChangeNotifier {
   // Lấy top customers theo số lượng đơn hàng (cần thêm logic nếu có dữ liệu)
   List<Customer> getTopCustomers({int limit = 10}) {
     return _customers
-        .where((customer) => customer.isPayingCustomer)
+        .where((customer) => customer.orderCount > 0)
         .take(limit)
         .toList();
   }
 
   // Thống kê số lượng customers
   int get totalCustomers => _customers.length;
-  int get payingCustomers => _customers.where((c) => c.isPayingCustomer).length;
-  int get newCustomers => _customers.where((c) => 
-      DateTime.parse(c.dateCreated).isAfter(
-        DateTime.now().subtract(Duration(days: 30))
-      )
-    ).length;
+  int get payingCustomers => _customers.where((c) => c.orderCount > 0).length;
+  
+  // Lấy số lượng khách hàng mới trong 30 ngày qua
+  int get newCustomers {
+    return _customers.where((customer) => customer.isNewCustomer).length;
+  }
 }

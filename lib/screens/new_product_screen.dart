@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:flashy_flushbar/flashy_flushbar_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../services/product_service.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../providers/product_provider.dart';
 import '../models/category.dart';
 import '../widgets/molecule/category_tree.dart';
@@ -22,7 +22,6 @@ class _NewProductScreenState extends State<NewProductScreen> {
   bool isSaving = false;
   File? imageFile;
   final ImagePicker _imagePicker = ImagePicker();
-  String? imageSrc;
 
   late TextEditingController nameController;
   late TextEditingController descriptionController;
@@ -93,85 +92,100 @@ class _NewProductScreenState extends State<NewProductScreen> {
   Future<void> _createProductInBackground(
     ProductProvider productProvider,
   ) async {
-    print('🚀 Bắt đầu tạo sản phẩm background...');
-
     try {
       // Tạo temporary product với loading state
       final tempProductData = {
         'name': nameController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'regular_price': priceController.text.trim(),
         'price': priceController.text.trim(),
-        'type': 'simple',
-        'status': 'publish',
-        'categories': selectedCategory != null
-            ? [
-                {'id': selectedCategory!.id},
-              ]
-            : [],
-        'meta_data': [
-          {'key': 'paczka', 'value': paczkaController.text.trim()},
-          {'key': 'karton', 'value': kartonController.text.trim()},
-          {'key': 'kho_hang', 'value': khoHangController.text.trim()},
-          {'key': 'custom_price', 'value': priceController.text.trim()},
-        ],
-        'images': [],
+        'step': paczkaController.text.trim(),
+        'warehouse': khoHangController.text.trim(),
+        'carton': kartonController.text.trim(),
+        'image': null,  // Sẽ được cập nhật sau khi tạo thành công
+        'category': selectedCategory != null
+            ? {
+                'id': selectedCategory!.id,
+                'name': selectedCategory!.name,
+              }
+            : null,
       };
 
-      print('📦 Tạo loading product...');
-      // Thêm loading product vào danh sách sử dụng provider reference
+      // Thêm loading product vào danh sách
       productProvider.addLoadingProduct(tempProductData);
 
-      int? uploadedImageId;
-
-             // Upload ảnh nếu có
-       if (imageFile != null) {
-         print('📸 Bắt đầu upload ảnh...');
-         uploadedImageId = await ProductService.uploadImage(imageFile!);
-         if (uploadedImageId == null) {
-           // Upload ảnh thất bại -> show error và dừng
-           print('❌ Upload ảnh thất bại, dừng tạo sản phẩm');
-           productProvider.removeLoadingProduct();
-           FlashyFlushbar(
-             message: 'Nie udało się przesłać zdjęcia',
-             duration: const Duration(seconds: 3),
-             backgroundColor: Colors.red,
-           ).show();
-           return; // Dừng việc tạo sản phẩm
-         }
-         print('✅ Upload ảnh thành công, ID: $uploadedImageId');
-       } else {
-         print('📷 Không có ảnh để upload');
-       }
-
-       // Cập nhật productData với image ID (nếu có)
-       final finalProductData = {
-         ...tempProductData,
-         'images': uploadedImageId != null
-             ? [
-                 {'id': uploadedImageId},
-               ]
-             : [],
-       };
-
-       print('🛍️ Bắt đầu tạo sản phẩm thực sự...');
-       // Tạo sản phẩm thực sự sử dụng provider reference
-       await productProvider.createProductFromLoading(finalProductData);
-       print('✅ Tạo sản phẩm thành công!');
-    } catch (e, stackTrace) {
-      print('❌ Lỗi tạo sản phẩm: $e');
-      print('📍 Stack trace: $stackTrace');
-
+      // Tạo sản phẩm thực sự sử dụng API v9
+      await productProvider.createProductWithNewAPI(
+        name: nameController.text.trim(),
+        price: priceController.text.trim(),
+        step: paczkaController.text.trim().isNotEmpty 
+            ? paczkaController.text.trim() 
+            : null,
+        warehouse: khoHangController.text.trim().isNotEmpty 
+            ? khoHangController.text.trim() 
+            : null,
+        carton: kartonController.text.trim().isNotEmpty 
+            ? kartonController.text.trim() 
+            : null,
+        categoryId: selectedCategory?.id.toString(),
+        imageFile: imageFile,
+      );
+    } catch (e) {
       // Xóa loading product sử dụng provider reference
       productProvider.removeLoadingProduct();
+    }
+  }
 
-      FlashyFlushbar(
-        message: 'Nie udało się utworzyć produktu',
-        duration: const Duration(seconds: 3),
-        backgroundColor: Colors.red,
-      ).show();
+  // Tính toán quality dựa trên kích thước file
+  int _calculateQuality(int fileSizeInBytes) {
+    final fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+    
+    if (fileSizeInMB < 1) {
+      return 70; // File nhỏ, nén nhẹ
+    } else if (fileSizeInMB < 2) {
+      return 60;
+    } else if (fileSizeInMB < 4) {
+      return 50;
+    } else if (fileSizeInMB < 6) {
+      return 40;
+    } else {
+      return 30; // File lớn, nén mạnh nhất
+    }
+  }
 
-      print('⚠️ Lỗi đã được xử lý, loading product đã bị xóa');
+  Future<File?> _compressImage(File file) async {
+    try {
+      // Lấy kích thước file gốc
+      final fileSize = await file.length();
+      final quality = _calculateQuality(fileSize);
+      
+      print('📊 Kích thước file gốc: ${(fileSize / (1024 * 1024)).toStringAsFixed(2)}MB');
+      print('🎨 Chất lượng nén: $quality%');
+      
+      // Lấy thư mục temporary để lưu ảnh đã nén
+      final tempDir = await getTemporaryDirectory();
+      final targetPath = path.join(
+        tempDir.path,
+        'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      // Nén ảnh với quality thích ứng
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: quality,
+        format: CompressFormat.jpeg,
+      );
+
+      if (compressedFile != null) {
+        final compressedSize = await File(compressedFile.path).length();
+        final compressionRatio = ((fileSize - compressedSize) / fileSize * 100);
+        print('📊 Kích thước sau nén: ${(compressedSize / (1024 * 1024)).toStringAsFixed(2)}MB');
+        print('🎆 Tiết kiệm: ${compressionRatio.toStringAsFixed(1)}%');
+      }
+
+      return compressedFile != null ? File(compressedFile.path) : null;
+    } catch (e) {
+      print('Lỗi khi nén ảnh: $e');
+      return file; // Trả về ảnh gốc nếu có lỗi
     }
   }
 
@@ -182,10 +196,36 @@ class _NewProductScreenState extends State<NewProductScreen> {
     );
 
     if (pickedImage != null) {
-      setState(() {
-        imageFile = File(pickedImage.path);
-        imageSrc = pickedImage.path;
-      });
+      final originalFile = File(pickedImage.path);
+      
+      // Hiển thị loading indicator trong khi nén ảnh
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      try {
+        // Nén ảnh
+        final compressedFile = await _compressImage(originalFile);
+        
+        if (mounted) {
+          Navigator.of(context).pop(); // Đóng loading dialog
+          
+          setState(() {
+            imageFile = compressedFile;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Đóng loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi khi xử lý ảnh: $e')),
+          );
+        }
+      }
     }
   }
 

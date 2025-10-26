@@ -28,7 +28,7 @@ class ProductCard extends StatefulWidget {
 class _ProductCardState extends State<ProductCard> {
   bool _isLoading = false;
 
-  Future<void> _addToCart() async {
+  Future<void> _addToCart(product_models.Product product) async {
     setState(() {
       _isLoading = true;
     });
@@ -36,37 +36,24 @@ class _ProductCardState extends State<ProductCard> {
     try {
       final cartProvider = context.read<CartProvider>();
       
-      final existingItem = cartProvider.getItem(widget.product.id);
+      final existingItem = cartProvider.getItem(product.id);
 
       if (existingItem != null) {
         await cartProvider.updateItemQuantity(
-          widget.product.id,
+          product.id,
           existingItem.quantity + 1,
         );
       } else {
-        String price = widget.product.metaData
-            .firstWhere(
-              (meta) => meta.key == 'custom_price',
-              orElse: () => product_models.MetaData(key: 'custom_price', value: '0'),
-            )
-            .value;
-        
-        String paczkaValue = widget.product.metaData
-            .firstWhere(
-              (meta) => meta.key == 'paczka',
-              orElse: () => product_models.MetaData(key: 'paczka', value: '1'),
-            )
-            .value;
-        
-        int paczkaQuantity = int.tryParse(paczkaValue) ?? 1;
+        String price = product.price;
+        int stepQuantity = int.tryParse(product.step) ?? 1;
 
         await cartProvider.addItemToCart(
-          productId: widget.product.id,
-          name: widget.product.name,
+          productId: product.id,
+          name: product.name,
           price: price,
-          quantity: paczkaQuantity,
-          imageUrl: widget.product.images.isNotEmpty ? widget.product.images.first.src : null,
-          description: widget.product.description,
+          quantity: stepQuantity,
+          imageUrl: product.image?.src,
+          description: '',  // Description không còn có trong model mới
         );
       }
     } catch (e) {
@@ -87,23 +74,23 @@ class _ProductCardState extends State<ProductCard> {
     }
   }
 
-  Future<void> _removeFromCart() async {
+  Future<void> _removeFromCart(product_models.Product product) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
       final cartProvider = context.read<CartProvider>();
-      final existingItem = cartProvider.getItem(widget.product.id);
+      final existingItem = cartProvider.getItem(product.id);
 
       if (existingItem != null) {
         if (existingItem.quantity > 1) {
           await cartProvider.updateItemQuantity(
-            widget.product.id,
+            product.id,
             existingItem.quantity - 1,
           );
         } else {
-          await cartProvider.removeItem(widget.product.id);
+          await cartProvider.removeItem(product.id);
         }
       }
     } catch (e) {
@@ -128,17 +115,21 @@ class _ProductCardState extends State<ProductCard> {
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
     final isLoadingProduct = productProvider.isLoadingProduct(widget.product.id);
+    final isUpdatingProduct = productProvider.isUpdatingProduct(widget.product.id);
+    
+    // Get the latest product data from provider to ensure UI reflects updates
+    final currentProduct = productProvider.getProductById(widget.product.id) ?? widget.product;
     
     return InkWell(
       onTap: () {
-        if (isLoadingProduct) {
-          // Không cho phép tap vào loading product
+        if (isLoadingProduct || isUpdatingProduct) {
+          // Không cho phép tap vào loading/updating product
           return;
         }
         if (widget.isSelectionMode) {
           widget.onSelectionTap();
         } else {
-          context.push('/products/${widget.product.id}');
+          context.push('/products/${currentProduct.id}');
         }
       },
       child: Stack(
@@ -168,18 +159,18 @@ class _ProductCardState extends State<ProductCard> {
                 Stack(
                   children: [
                     AspectRatio(
-                      aspectRatio: 1.8,
+                      aspectRatio: 1.5,
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
                           color: Colors.grey[200],
-                          image: widget.product.images.isNotEmpty
+                          image: currentProduct.image?.src != null
                               ? DecorationImage(
                                   alignment: Alignment.center,
                                   image: CachedNetworkImageProvider(
-                                    widget.product.images.first.src ?? '',
+                                    currentProduct.image!.src!,
                                   ),
                                   fit: BoxFit.cover,
                                   onError: (exception, stackTrace) {
@@ -188,7 +179,7 @@ class _ProductCardState extends State<ProductCard> {
                                 )
                               : null,
                         ),
-                        child: widget.product.images.isEmpty
+                        child: currentProduct.image?.src == null
                             ? Center(
                                 child: Icon(
                                   Icons.image_not_supported,
@@ -200,19 +191,19 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                     Positioned(
-                      top: 8,
-                      left: 8,
+                      top: 6,
+                      left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.6),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          '${widget.product.id}',
+                          '${currentProduct.id}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -223,37 +214,37 @@ class _ProductCardState extends State<ProductCard> {
                 
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(6.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.product.name,
+                          currentProduct.name,
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         RichText(
                           text: TextSpan(
                             children: [
                               TextSpan(
                                 text: CurrencyFormatter.formatPLNFromString(
-                                  widget.product.metaData.where((element) => element.key == 'custom_price').firstOrNull?.value ?? '0'
+                                  currentProduct.price
                                 ),
                                 style: const TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 11,
                                   color: Colors.red,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               TextSpan(
-                                text: ' (${widget.product.metaData.where((element) => element.key == 'paczka').firstOrNull?.value ?? '1'})',
+                                text: ' (${currentProduct.step})',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 10,
                                   color: Colors.blue,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -266,15 +257,15 @@ class _ProductCardState extends State<ProductCard> {
                         if (!widget.isSelectionMode)
                           Consumer<CartProvider>(
                             builder: (context, cartProvider, child) {
-                              final existingItem = cartProvider.getItem(widget.product.id);
+                              final existingItem = cartProvider.getItem(currentProduct.id);
                               final quantityInCart = existingItem?.quantity ?? 0;
 
                               if (quantityInCart == 0) {
                                 return SizedBox(
                                   width: double.infinity,
-                                  height: 32,
+                                  height: 24,
                                   child: ElevatedButton(
-                                    onPressed: _isLoading ? null : _addToCart,
+                                    onPressed: _isLoading ? null : () => _addToCart(currentProduct),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Theme.of(context).primaryColor,
                                       foregroundColor: Colors.white,
@@ -295,7 +286,7 @@ class _ProductCardState extends State<ProductCard> {
                                         : const Text(
                                             'Dodaj',
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 9,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -305,10 +296,10 @@ class _ProductCardState extends State<ProductCard> {
                                 return Row(
                                   children: [
                                     SizedBox(
-                                      width: 32,
-                                      height: 32,
+                                      width: 24,
+                                      height: 24,
                                       child: ElevatedButton(
-                                        onPressed: _isLoading ? null : _removeFromCart,
+                                        onPressed: _isLoading ? null : () => _removeFromCart(currentProduct),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Theme.of(context).primaryColor,
                                           foregroundColor: Colors.white,
@@ -318,7 +309,7 @@ class _ProductCardState extends State<ProductCard> {
                                           ),
                                           elevation: 0,
                                         ),
-                                        child: const Icon(Icons.remove, size: 16),
+                                        child: const Icon(Icons.remove, size: 12),
                                       ),
                                     ),
                                     
@@ -334,7 +325,7 @@ class _ProductCardState extends State<ProductCard> {
                                             : Text(
                                                 '$quantityInCart',
                                                 style: const TextStyle(
-                                                  fontSize: 14,
+                                                  fontSize: 10,
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
@@ -342,10 +333,10 @@ class _ProductCardState extends State<ProductCard> {
                                     ),
                                     
                                     SizedBox(
-                                      width: 32,
-                                      height: 32,
+                                      width: 24,
+                                      height: 24,
                                       child: ElevatedButton(
-                                        onPressed: _isLoading ? null : _addToCart,
+                                        onPressed: _isLoading ? null : () => _addToCart(currentProduct),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Theme.of(context).primaryColor,
                                           foregroundColor: Colors.white,
@@ -355,7 +346,7 @@ class _ProductCardState extends State<ProductCard> {
                                           ),
                                           elevation: 0,
                                         ),
-                                        child: const Icon(Icons.add, size: 16),
+                                        child: const Icon(Icons.add, size: 12),
                                       ),
                                     ),
                                   ],
@@ -371,15 +362,15 @@ class _ProductCardState extends State<ProductCard> {
             ),
           ),
           
-          if (widget.isSelectionMode && !isLoadingProduct)
+          if (widget.isSelectionMode && !isLoadingProduct && !isUpdatingProduct)
             Positioned(
-              top: 16,
-              right: 16,
+              top: 12,
+              right: 12,
               child: GestureDetector(
                 onTap: widget.onSelectionTap,
                 child: Container(
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: widget.isSelected ? Colors.blue : Colors.white,
                     border: Border.all(
@@ -389,13 +380,13 @@ class _ProductCardState extends State<ProductCard> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: widget.isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                      ? const Icon(Icons.check, color: Colors.white, size: 12)
                       : null,
                 ),
               ),
             ),
           
-          // Loading overlay
+          // Loading overlay (for new products)
           if (isLoadingProduct)
             Positioned.fill(
               child: Container(
@@ -418,6 +409,37 @@ class _ProductCardState extends State<ProductCard> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // Updating overlay (for updating products)
+          if (isUpdatingProduct)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Colors.orange,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Đang cập nhật...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange,
                         ),
                       ),
                     ],

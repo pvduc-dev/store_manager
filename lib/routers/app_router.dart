@@ -84,7 +84,7 @@ class AppRouter {
         GoRoute(
           path: '/orders/:id/edit',
           builder: (context, state) =>
-              OrderEditScreen(orderId: int.parse(state.pathParameters['id'] ?? '')),
+              OrderEditScreen(orderId: state.pathParameters['id'] ?? ''),
         ),
         GoRoute(
           path: '/customers/new',

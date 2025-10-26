@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import '../models/customer.dart';
 
 class CustomerService {
-  static const String baseUrl = 'https://kochamtoys.pl/wp-json/wc/v3';
+  static const String baseUrl = 'https://kochamtoys.pl/wp-json/v1';
   static const String basicAuth =
       'Basic cGhhcHZuOk1MNmcgSUx6MCBNYm45IEp3Q0MgcUNwSiB2ZU9q';
 
@@ -13,7 +13,7 @@ class CustomerService {
   }) async {
     try {
       // Build URL with optional search parameter
-      String url = '$baseUrl/customers?per_page=$perPage&page=$page&orderby=registered_date&order=desc';
+      String url = '$baseUrl/customers?per_page=$perPage&page=$page';
       if (search != null && search.isNotEmpty) {
         url += '&search=$search';
       }
@@ -78,6 +78,9 @@ class CustomerService {
       }
     } catch (e) {
       print('Exception while creating customer: $e');
+      if (e is DioException) {
+        print('DioException: ${e.response?.data}');
+      }
       return null;
     }
   }

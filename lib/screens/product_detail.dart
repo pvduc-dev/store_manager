@@ -1,16 +1,17 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart' hide MetaData;
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../models/product.dart';
 import '../models/category.dart';
 import '../providers/product_provider.dart';
 import '../providers/category_provider.dart';
-import '../services/product_service.dart';
 import '../widgets/molecule/category_tree.dart';
 
 class ProductDetail extends StatefulWidget {
@@ -23,13 +24,11 @@ class ProductDetail extends StatefulWidget {
 
 class _ProductDetailState extends State<ProductDetail> {
   bool isSaving = false;
-  bool isUploading = false; // Thêm biến theo dõi trạng thái upload
   Product? product;
   bool isLoading = false;
   File? imageFile;
   final ImagePicker _imagePicker = ImagePicker();
   String? imageSrc;
-  int? uploadedImageId;
 
   // Controllers cho form
   late TextEditingController nameController;
@@ -84,31 +83,11 @@ class _ProductDetailState extends State<ProductDetail> {
 
       // Populate form fields
       nameController.text = loadedProduct.name;
-      descriptionController.text = loadedProduct.description;
-      customPriceController.text = loadedProduct.metaData
-          .firstWhere(
-            (meta) => meta.key == 'custom_price',
-            orElse: () => MetaData(key: 'custom_price', value: ''),
-          )
-          .value;
-      paczkaController.text = loadedProduct.metaData
-          .firstWhere(
-            (meta) => meta.key == 'paczka',
-            orElse: () => MetaData(key: 'paczka', value: ''),
-          )
-          .value;
-      kartonController.text = loadedProduct.metaData
-          .firstWhere(
-            (meta) => meta.key == 'karton',
-            orElse: () => MetaData(key: 'karton', value: ''),
-          )
-          .value;
-      warehouseController.text = loadedProduct.metaData
-          .firstWhere(
-            (meta) => meta.key == 'kho_hang',
-            orElse: () => MetaData(key: 'kho_hang', value: ''),
-          )
-          .value;
+      descriptionController.text = '';  // Description không còn có trong model mới
+      customPriceController.text = loadedProduct.price;
+      paczkaController.text = loadedProduct.step;
+      kartonController.text = loadedProduct.carton;
+      warehouseController.text = loadedProduct.warehouse;
       
       // Load current category
       _loadCurrentCategory(loadedProduct);
@@ -116,35 +95,17 @@ class _ProductDetailState extends State<ProductDetail> {
   }
 
   void _loadCurrentCategory(Product product) {
-    // If product has categories, find the first one
-    if (product.categories.isNotEmpty) {
-      final productCategoryId = product.categories.first.id;
-      
-      // Wait for categories to be loaded, then find the category
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Future.delayed(Duration(milliseconds: 500), () {
-          final categoryProvider = context.read<CategoryProvider>();
-          
-          if (categoryProvider.categories.isNotEmpty) {
-            final category = categoryProvider.categories.firstWhere(
-              (cat) => cat.id == productCategoryId,
-              orElse: () => Category(
-                id: productCategoryId,
-                name: 'Kategoria nieokreślona',
-                slug: '',
-                parent: 0,
-                description: '',
-              ),
-            );
-            
-            if (mounted) {
-              setState(() {
-                selectedCategory = category;
-              });
-            }
-          }
-        });
-      });
+    // Sử dụng single category từ model mới
+    if (product.category != null) {
+      selectedCategory = Category(
+        id: product.category!.id,
+        name: product.category!.name,
+        slug: '',
+        parent: 0,
+        description: '',
+      );
+    } else {
+      selectedCategory = null;
     }
   }
 
@@ -163,55 +124,104 @@ class _ProductDetailState extends State<ProductDetail> {
       return;
     }
 
+    setState(() {
+      isSaving = true;
+    });
+
+    // Lấy reference tới ProductProvider trước khi navigate
+    final productProvider = context.read<ProductProvider>();
+
+    // Chạy update sản phẩm ở background trước
+    _updateProductInBackground(productProvider);
+
+    // Set lại isSaving và chuyển về màn hình product list ngay lập tức
+    setState(() {
+      isSaving = false;
+    });
+
+    if (mounted) {
+      context.go('/products');
+    }
+  }
+
+  Future<void> _updateProductInBackground(
+    ProductProvider productProvider,
+  ) async {
     try {
-      setState(() {
-        isSaving = true;
-      });
-
-      final productData = {
-        'id': product!.id,
-        'name': nameController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'regular_price': customPriceController.text.trim(),
-        'price': customPriceController.text.trim(),
-        'type': 'simple',
-        'status': 'publish',
-        'categories': selectedCategory != null
-            ? [
-                {'id': selectedCategory!.id},
-              ]
-            : [],
-        'meta_data': [
-          {'key': 'paczka', 'value': paczkaController.text.trim()},
-          {'key': 'karton', 'value': kartonController.text.trim()},
-          {'key': 'kho_hang', 'value': warehouseController.text.trim()},
-          {'key': 'custom_price', 'value': customPriceController.text.trim()},
-        ],
-        'images': uploadedImageId != null
-            ? [
-                {'id': uploadedImageId},
-              ]
-            : product!.images.map((e) => {'id': e.id}).toList(),
-      };
-
-      await context.read<ProductProvider>().updateProduct(productData);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Produkt został pomyślnie zaktualizowany!')),
-        );
-        context.go('/products');
-      }
+      // Cập nhật sản phẩm thực sự sử dụng API v9
+      await productProvider.updateProductWithNewAPI(
+        productId: product!.id,
+        name: nameController.text.trim(),
+        price: customPriceController.text.trim(),
+        step: paczkaController.text.trim().isNotEmpty 
+            ? paczkaController.text.trim() 
+            : null,
+        warehouse: warehouseController.text.trim().isNotEmpty 
+            ? warehouseController.text.trim() 
+            : null,
+        carton: kartonController.text.trim().isNotEmpty 
+            ? kartonController.text.trim() 
+            : null,
+        categoryId: selectedCategory?.id.toString(),
+        imageFile: imageFile,
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Błąd podczas aktualizacji produktu')),
-        );
+      // Error handling if needed
+    }
+  }
+
+  // Tính toán quality dựa trên kích thước file
+  int _calculateQuality(int fileSizeInBytes) {
+    final fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+    
+    if (fileSizeInMB < 1) {
+      return 70; // File nhỏ, nén nhẹ
+    } else if (fileSizeInMB < 2) {
+      return 60;
+    } else if (fileSizeInMB < 4) {
+      return 50;
+    } else if (fileSizeInMB < 6) {
+      return 40;
+    } else {
+      return 30; // File lớn, nén mạnh nhất
+    }
+  }
+
+  Future<File?> _compressImage(File file) async {
+    try {
+      // Lấy kích thước file gốc
+      final fileSize = await file.length();
+      final quality = _calculateQuality(fileSize);
+      
+      print('📊 Kích thước file gốc: ${(fileSize / (1024 * 1024)).toStringAsFixed(2)}MB');
+      print('🎨 Chất lượng nén: $quality%');
+      
+      // Lấy thư mục temporary để lưu ảnh đã nén
+      final tempDir = await getTemporaryDirectory();
+      final targetPath = path.join(
+        tempDir.path,
+        'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      // Nén ảnh với quality thích ứng
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: quality,
+        format: CompressFormat.jpeg,
+      );
+
+      if (compressedFile != null) {
+        final compressedSize = await File(compressedFile.path).length();
+        final compressionRatio = ((fileSize - compressedSize) / fileSize * 100);
+        print('📊 Kích thước sau nén: ${(compressedSize / (1024 * 1024)).toStringAsFixed(2)}MB');
+        print('🎆 Tiết kiệm: ${compressionRatio.toStringAsFixed(1)}%');
       }
-    } finally {
-      setState(() {
-        isSaving = false;
-      });
+
+      return compressedFile != null ? File(compressedFile.path) : null;
+    } catch (e) {
+      print('Lỗi khi nén ảnh: $e');
+      return file; // Trả về ảnh gốc nếu có lỗi
     }
   }
 
@@ -222,30 +232,36 @@ class _ProductDetailState extends State<ProductDetail> {
     );
 
     if (pickedImage != null) {
-      setState(() {
-        imageFile = File(pickedImage.path);
-        imageSrc = pickedImage.path;
-        isUploading = true; // Bắt đầu trạng thái upload
-      });
+      final originalFile = File(pickedImage.path);
+      
+      // Hiển thị loading indicator trong khi nén ảnh
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
 
       try {
-        final imageId = await ProductService.uploadImage(imageFile!);
-        if (imageId != null) {
+        // Nén ảnh
+        final compressedFile = await _compressImage(originalFile);
+        
+        if (mounted) {
+          Navigator.of(context).pop(); // Đóng loading dialog
+          
           setState(() {
-            uploadedImageId = imageId;
+            imageFile = compressedFile;
+            imageSrc = compressedFile?.path;
           });
         }
       } catch (e) {
-        print('Lỗi upload ảnh: $e');
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Błąd podczas przesyłania zdjęcia')));
+          Navigator.of(context).pop(); // Đóng loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi khi xử lý ảnh: $e')),
+          );
         }
-      } finally {
-        setState(() {
-          isUploading = false; // Kết thúc trạng thái upload
-        });
       }
     }
   }
@@ -286,107 +302,36 @@ class _ProductDetailState extends State<ProductDetail> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: imageFile != null
-                              ? Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Image.file(
-                                        imageFile!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.image_outlined,
-                                                    size: 48,
-                                                    color: Colors.grey,
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  const Text(
-                                                    'Nie można załadować zdjęcia',
-                                                    style: TextStyle(
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                      ),
-                                    ),
-                                    // Hiển thị loading khi đang upload
-                                    if (isUploading)
-                                      Positioned.fill(
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(0.5),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Image.file(
+                                    imageFile!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.image_outlined,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Nie można załadować zdjęcia',
+                                            style: TextStyle(
+                                              color: Colors.grey,
                                             ),
                                           ),
-                                          child: const Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                ),
-                                                SizedBox(height: 8),
-                                                Text(
-                                                  'Przesyłanie...',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    if (uploadedImageId != null && !isUploading)
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.check,
-                                                color: Colors.white,
-                                                size: 16,
-                                              ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'Przesłano',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 )
-                              : (product!.images.isNotEmpty
+                              : (product!.image?.src != null
                                     ? CachedNetworkImage(
-                                        imageUrl: product!.images.first.src!,
+                                        imageUrl: product!.image!.src!,
                                         fit: BoxFit.contain,
                                         placeholder: (context, url) =>
                                             const Center(
@@ -541,7 +486,7 @@ class _ProductDetailState extends State<ProductDetail> {
           child: SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: (isSaving || isUploading) ? null : _saveProduct,
+              onPressed: isSaving ? null : _saveProduct,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -557,21 +502,13 @@ class _ProductDetailState extends State<ProductDetail> {
                         color: Colors.white,
                       ),
                     )
-                  : isUploading
-                      ? const Text(
-                          'Przesyłanie...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      : const Text(
-                          'Zapisz zmiany',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  : const Text(
+                      'Zapisz zmiany',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
           ),
         ),

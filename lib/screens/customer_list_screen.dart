@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:store_manager/providers/customer_provider.dart';
@@ -154,10 +153,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                       itemCount: customers.length + 
                           (customerProvider.hasMoreData && !customerProvider.isSearching ? 1 : 0),
                       separatorBuilder: (context, index) {
-                        if (index == customers.length - 1 && customerProvider.hasMoreData && !customerProvider.isSearching) {
-                          return const SizedBox.shrink();
-                        }
-                        return const SizedBox(height: 8);
+                        return const SizedBox.shrink();
                       },
                       itemBuilder: (context, index) {
                         if (index == customers.length && !customerProvider.isSearching) {
@@ -192,22 +188,94 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   }
 
   Widget _buildCustomerCard(BuildContext context, Customer customer) {
-    return ListTile(
-      tileColor: Colors.white,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ListTile(
       leading: CircleAvatar(
-        backgroundImage: CachedNetworkImageProvider(customer.avatarUrl),
-        backgroundColor: Colors.grey[300],
+        backgroundColor: Colors.blue[100],
+        child: Text(
+          customer.firstName.isNotEmpty 
+              ? customer.firstName[0].toUpperCase()
+              : '?',
+          style: TextStyle(
+            color: Colors.blue[700],
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
       ),
       title: Text(
-        customer.fullName.isNotEmpty 
-            ? customer.fullName 
-            : customer.username,
+        customer.firstName.isNotEmpty 
+            ? customer.firstName 
+            : 'Brak nazwy',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontWeight: FontWeight.w500,
+        ),
       ),
-      subtitle: Text(customer.email),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            customer.email,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              if (customer.phone.isNotEmpty) ...[
+                Icon(Icons.phone, size: 12, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    customer.phone,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ),
+              ],
+              if (customer.phone.isNotEmpty && customer.nip.isNotEmpty)
+                const SizedBox(width: 16),
+              if (customer.nip.isNotEmpty) ...[
+                Icon(Icons.business, size: 12, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    'NIP: ${customer.nip}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
       trailing: Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.grey[600]),
-      onTap: () {
-        context.push('/customers/${customer.id}');
-      },
+        onTap: () {
+          context.push('/customers/${customer.id}');
+        },
+      ),
     );
   }
 

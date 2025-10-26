@@ -18,7 +18,7 @@ class _CustomerFormState extends State<CustomerForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  late TextEditingController _passwordController;
+
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _taxCodeController;
@@ -33,15 +33,15 @@ class _CustomerFormState extends State<CustomerForm> {
     _emailController = TextEditingController(
       text: widget.customer?.email ?? '',
     );
-    _passwordController = TextEditingController();
+
     _phoneController = TextEditingController(
-      text: widget.customer?.billingPhone ?? '',
+      text: widget.customer?.phone ?? '',
     );
     _addressController = TextEditingController(
-      text: widget.customer?.billingAddress ?? '',
+      text: widget.customer?.address ?? '',
     );
     _taxCodeController = TextEditingController(
-      text: widget.customer?.billing.company ?? '',
+      text: widget.customer?.nip ?? '',
     );
   }
 
@@ -49,7 +49,7 @@ class _CustomerFormState extends State<CustomerForm> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
+
     _phoneController.dispose();
     _addressController.dispose();
     _taxCodeController.dispose();
@@ -77,14 +77,16 @@ class _CustomerFormState extends State<CustomerForm> {
         };
 
         if (widget.customer == null) {
-          formData['password'] = _passwordController.text;
+          formData['password'] = 'customer@113';
         } else {
           formData['id'] = widget.customer!.id;
         }
 
         if (widget.customer != null) {
           await context.read<CustomerProvider>().updateCustomer(formData);
-          context.go('/customers/${widget.customer!.id}');
+          if (context.mounted) {
+            context.pop();
+          }
         } else {
           await context.read<CustomerProvider>().addCustomer(formData);
           context.go('/customers');
@@ -155,27 +157,6 @@ class _CustomerFormState extends State<CustomerForm> {
                 },
               ),
               const SizedBox(height: 16),
-
-              if (widget.customer == null) ...[
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Mật khẩu',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
-                    }
-                    if (value.length < 6) {
-                      return 'Mật khẩu phải có ít nhất 6 ký tự';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
 
               TextFormField(
                 controller: _phoneController,
