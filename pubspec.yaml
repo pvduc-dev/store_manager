@@ -32,6 +32,8 @@ dependencies:
   flutter_image_compress: ^2.4.0
   firebase_core: ^4.1.0
   firebase_messaging: ^16.0.1
+  image_gallery_saver: ^2.0.3
+  permission_handler: ^11.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

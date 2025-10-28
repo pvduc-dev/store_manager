@@ -8,7 +8,8 @@ import 'package:store_manager/screens/login_screen.dart';
 import 'package:store_manager/screens/new_product_screen.dart';
 import 'package:store_manager/screens/order_edit_screen.dart';
 import 'package:store_manager/screens/order_new_screen.dart';
-import 'package:store_manager/screens/product_detail.dart';
+import 'package:store_manager/screens/product-edit.dart';
+import 'package:store_manager/screens/product-detail.dart';
 import 'package:store_manager/screens/product_list_screen.dart';
 import 'package:store_manager/screens/setting_screen.dart';
 import 'package:store_manager/screens/order_list_screen.dart';
@@ -71,6 +72,11 @@ class AppRouter {
           path: '/products/:id',
           builder: (context, state) =>
               ProductDetail(id: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: '/products/:id/detail',
+          builder: (context, state) =>
+              ProductDetailScreen(id: state.pathParameters['id'] ?? ''),
         ),
         GoRoute(
           path: '/orders/new',

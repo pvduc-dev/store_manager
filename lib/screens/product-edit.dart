@@ -390,40 +390,6 @@ class _ProductDetailState extends State<ProductDetail> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Category Selector
-                      Text(
-                        'Kategoria produktu',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      CategorySelector(
-                        selectedCategory: selectedCategory,
-                        hintText: 'Wybierz kategorię produktu',
-                        onCategorySelected: (category) {
-                          setState(() {
-                            selectedCategory = category;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Product Description
-                      // TextFormField(
-                      //   controller: descriptionController,
-                      //   maxLines: 3,
-                      //   textInputAction: TextInputAction.newline,
-                      //   decoration: const InputDecoration(
-                      //     labelText: 'Mô tả sản phẩm',
-                      //     border: OutlineInputBorder(),
-                      //     isDense: true,
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 24),
-
                       // Custom Price
                       TextFormField(
                         controller: customPriceController,
@@ -450,6 +416,40 @@ class _ProductDetailState extends State<ProductDetail> {
                       ),
                       const SizedBox(height: 24),
 
+                      // Category Selector
+                      Text(
+                        'Kategoria produktu',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CategorySelector(
+                        selectedCategory: selectedCategory,
+                        hintText: 'Wybierz kategorię produktu',
+                        onCategorySelected: (category) {
+                          setState(() {
+                            selectedCategory = category;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Magazyn
+                      TextFormField(
+                        controller: warehouseController,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Magazyn',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
                       // Karton
                       TextFormField(
                         controller: kartonController,
@@ -457,19 +457,6 @@ class _ProductDetailState extends State<ProductDetail> {
                         textInputAction: TextInputAction.done,
                         decoration: const InputDecoration(
                           labelText: 'Karton',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Kho hang
-                      TextFormField(
-                        controller: warehouseController,
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.done,
-                        decoration: const InputDecoration(
-                          labelText: 'Magazyn',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),

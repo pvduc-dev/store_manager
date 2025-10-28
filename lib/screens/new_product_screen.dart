@@ -321,38 +321,6 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Category Selector
-                Text(
-                  'Kategoria produktu',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                CategorySelector(
-                  selectedCategory: selectedCategory,
-                  hintText: 'Wybierz kategorię produktu',
-                  onCategorySelected: (category) {
-                    setState(() {
-                      selectedCategory = category;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // TextFormField(
-                //   controller: descriptionController,
-                //   maxLines: 3,
-                //   textInputAction: TextInputAction.newline,
-                //   decoration: const InputDecoration(
-                //     labelText: 'Mô tả sản phẩm',
-                //     border: OutlineInputBorder(),
-                //     isDense: true,
-                //   ),
-                // ),
-                // const SizedBox(height: 24),
                 TextFormField(
                   controller: priceController,
                   keyboardType: TextInputType.numberWithOptions(
@@ -380,15 +348,24 @@ class _NewProductScreenState extends State<NewProductScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                TextFormField(
-                  controller: kartonController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Karton',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+                // Category Selector
+                Text(
+                  'Kategoria produktu',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
                   ),
+                ),
+                const SizedBox(height: 8),
+                CategorySelector(
+                  selectedCategory: selectedCategory,
+                  hintText: 'Wybierz kategorię produktu',
+                  onCategorySelected: (category) {
+                    setState(() {
+                      selectedCategory = category;
+                    });
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -398,6 +375,18 @@ class _NewProductScreenState extends State<NewProductScreen> {
                   textInputAction: TextInputAction.done,
                   decoration: const InputDecoration(
                     labelText: 'Magazyn',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                TextFormField(
+                  controller: kartonController,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    labelText: 'Karton',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),

@@ -51,5 +51,9 @@
 	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập thư viện ảnh để cho phép người dùng chọn và upload ảnh sản phẩm trong quá trình quản lý cửa hàng.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần truy cập camera để chụp ảnh sản phẩm cho cửa hàng.</string>
 </dict>
 </plist>

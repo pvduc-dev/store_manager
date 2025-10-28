@@ -129,7 +129,7 @@ class _ProductCardState extends State<ProductCard> {
         if (widget.isSelectionMode) {
           widget.onSelectionTap();
         } else {
-          context.push('/products/${currentProduct.id}');
+          context.push('/products/${currentProduct.id}/detail');
         }
       },
       child: Stack(
